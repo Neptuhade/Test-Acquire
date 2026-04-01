@@ -1369,6 +1369,7 @@ function updTimerBar(){
 function advance(){
   stopTimer();
   G.ci=(G.ci+1)%G.players.length;
+  G.phase='place';
   G.sel=null;
   if(G.isMP){
     writeMoveToFirebase(G).then(()=>{
