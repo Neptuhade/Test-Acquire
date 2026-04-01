@@ -1136,7 +1136,7 @@ body{background:var(--bd);font-family:'Libre Baskerville',serif;color:var(--crea
   <div class="mb" id="meg-b"></div>
   <div style="display:flex;gap:8px;margin-top:12px">
     <button class="ba bet" style="flex:1" onclick="endGame()">End Game</button>
-    <button class="ba bbu" style="flex:1" onclick="closeMo('meg')">Keep Playing</button>
+    <button class="ba bbu" style="flex:1" onclick="keepPlaying()">Keep Playing</button>
   </div>
 </div></div>
 
@@ -1962,17 +1962,29 @@ function confirmBuy(){
 
 // ═══════════════ END TURN ═══════════════
 function doEndTurn(){
+  try{
   stopTimer();drawTile(cur());renderAll();
+  // Always queue advance — even if end-game modal intervenes
+  G._pendingAdvance = advance;
   const ec=endCond();
   if(ec&&!cur().isAI){
     document.getElementById('meg-b').textContent=ec;
     document.getElementById('meg').classList.add('a');
-    return;
+    return; // "Keep Playing" calls proceedToTurnSummary(); "End Game" calls endGame()
   }
   // Show turn summary before advancing — human and AI turns alike
-  G._pendingAdvance = advance;
-  if(G.isMP) pushTurnSummaryToFirebase(); // push to Firebase for other players
-  showTurnSummary(); // show locally immediately
+  proceedToTurnSummary();
+  }catch(e){console.error('doEndTurn error:',e);alert('doEndTurn error: '+e.message);}
+}
+function proceedToTurnSummary(){
+  try{
+  if(G.isMP) pushTurnSummaryToFirebase();
+  showTurnSummary();
+  }catch(e){console.error('proceedToTurnSummary error:',e);alert('Turn summary error: '+e.message);if(G._pendingAdvance){var fn=G._pendingAdvance;G._pendingAdvance=null;fn();}}
+}
+function keepPlaying(){
+  closeMo('meg');
+  proceedToTurnSummary();
 }
 function checkEnd(){const ec=endCond();if(ec&&cur().isAI){const s=[...G.players].sort((a,b)=>b.money-a.money);if(s[0].id===cur().id)setTimeout(endGame,400)}}
 function endCond(){
@@ -2527,7 +2539,7 @@ function showTurnSummary() {
   const el = document.getElementById('mts-body');
   const playerEl = document.getElementById('mts-player');
 
-  playerEl.textContent = p.player + "'s Turn";
+  playerEl.textContent = (p.player||'Player') + "'s Turn";
 
   let html = '';
 
@@ -2549,13 +2561,15 @@ function showTurnSummary() {
   }
 
   // Stocks bought
+  const stocksList = Array.isArray(p.stocks) ? p.stocks : [];
   html += `<div style="margin-bottom:8px;padding:8px;background:rgba(62,32,8,0.08);border-radius:3px;border-left:3px solid var(--gold)">`;
   html += `<div style="font-family:'Special Elite',cursive;font-size:9px;letter-spacing:2px;color:var(--bl);text-transform:uppercase;margin-bottom:5px">Stocks Purchased</div>`;
-  if (p.stocks.length === 0) {
+  if (stocksList.length === 0) {
     html += `<div style="font-size:12px;color:var(--bl);font-style:italic">No stocks purchased this turn</div>`;
   } else {
     let total = 0;
-    for (const s of p.stocks) {
+    for (const s of stocksList) {
+      if(!s||!CH[s.chain]) continue;
       const cost = s.qty * s.price;
       total += cost;
       html += `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(62,32,8,0.1)">`;
@@ -2570,13 +2584,13 @@ function showTurnSummary() {
   html += '</div>';
 
   // FIX 4: Merger details (if merger occurred this turn)
-  if (p.merger) {
+  if (p.merger && p.merger.survivor) {
     html += `<div style="margin-bottom:8px;padding:8px;background:rgba(255,152,152,0.08);border-radius:3px;border-left:3px solid var(--red)">`;
     html += `<div style="font-family:'Special Elite',cursive;font-size:9px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:5px">Merger</div>`;
 
     // Acquired chains
     html += `<div style="font-family:'Special Elite',cursive;font-size:9px;color:var(--bl);text-transform:uppercase;margin-bottom:4px">Acquired by ${p.merger.survivor.icon} ${p.merger.survivor.name}</div>`;
-    for(const acq of p.merger.acquired){
+    for(const acq of (p.merger.acquired||[])){
       html += `<div style="display:flex;align-items:center;gap:8px;padding:3px 6px;margin-bottom:3px;background:rgba(0,0,0,0.1);border-radius:2px">`;
       html += `<span style="font-size:14px">${acq.icon}</span>`;
       html += `<span style="font-size:11px">${acq.name}</span>`;
@@ -2587,34 +2601,42 @@ function showTurnSummary() {
     if(p.merger.bonuses && p.merger.bonuses.length > 0){
       html += `<div style="font-family:'Special Elite',cursive;font-size:9px;color:var(--bl);text-transform:uppercase;margin:6px 0 4px">Bonuses</div>`;
       for(const bd of p.merger.bonuses){
-        if(!bd.payouts || !bd.payouts.length) continue;
+        if(!bd || !bd.payouts || !bd.payouts.length) continue;
         for(const payout of bd.payouts){
+          if(!payout) continue;
           html += `<div style="display:flex;align-items:center;gap:6px;padding:3px 6px;margin-bottom:2px;background:rgba(201,162,39,0.1);border-radius:2px">`;
-          html += `<span style="font-family:'Special Elite',cursive;font-size:8px;color:var(--gold);min-width:50px">${payout.rank}</span>`;
-          html += `<span style="font-size:10px;flex:1">${payout.name}</span>`;
-          html += `<span style="font-family:'Playfair Display',serif;font-size:11px;font-weight:700;color:var(--gold)">+$${payout.amount.toLocaleString()}</span>`;
+          html += `<span style="font-family:'Special Elite',cursive;font-size:8px;color:var(--gold);min-width:50px">${payout.rank||''}</span>`;
+          html += `<span style="font-size:10px;flex:1">${payout.name||''}</span>`;
+          html += `<span style="font-family:'Playfair Display',serif;font-size:11px;font-weight:700;color:var(--gold)">+$${(payout.amount||0).toLocaleString()}</span>`;
           html += `</div>`;
         }
       }
     }
 
     // Disposal choices
-    if(p.merger.disposals && p.merger.disposals.length > 0){
+    const disposals = Array.isArray(p.merger.disposals) ? p.merger.disposals : [];
+    if(disposals.length > 0){
       html += `<div style="font-family:'Special Elite',cursive;font-size:9px;color:var(--bl);text-transform:uppercase;margin:6px 0 4px">Stock Disposals</div>`;
-      for(const disp of p.merger.disposals){
+      for(const disp of disposals){
+        if(!disp) continue;
         html += `<div style="padding:4px 6px;margin-bottom:3px;background:rgba(0,0,0,0.1);border-radius:2px;font-size:10px">`;
         html += `<div style="display:flex;align-items:center;gap:6px">`;
-        html += `<span>${disp.playerName} —</span>`;
+        html += `<span>${disp.playerName||'Player'} —</span>`;
         if(disp.action === 'kept'){
-          html += `<span>kept ${disp.qty} ${disp.chainName}</span>`;
+          html += `<span>kept ${disp.qty||0} ${disp.chainName||''}</span>`;
         }else if(disp.action === 'sold'){
-          html += `<span>sold ${disp.qty} ${disp.chainName} for $${disp.amount.toLocaleString()}</span>`;
-        }else if(disp.action === 'traded'){
-          html += `<span>traded ${disp.qty} ${disp.chainName} for ${disp.pairs} ${disp.survivorName}`;
-          if(disp.qty > disp.pairs*2){
-            html += ` + sold remainder for $${((disp.qty - disp.pairs*2) * (p.merger.disposals[0].amount ? p.merger.disposals[0].amount / p.merger.disposals[0].qty : 0)).toLocaleString()}`;
+          html += `<span>sold ${disp.qty||0} ${disp.chainName||''} for $${(disp.amount||0).toLocaleString()}</span>`;
+        }else if(disp.action === 'traded' || disp.action === 'traded_and_sold'){
+          const pairs = disp.pairs||0;
+          html += `<span>traded ${pairs*2} ${disp.chainName||''} for ${pairs} ${disp.survivorName||'survivor'}`;
+          const leftover = (disp.qty||0) - pairs*2;
+          if(leftover > 0 && disp.amount){
+            html += ` + sold ${leftover} for $${(disp.amount||0).toLocaleString()}`;
           }
           html += `</span>`;
+        }else{
+          // Fallback for unexpected action values
+          html += `<span>${disp.action||'disposed'} ${disp.qty||0} ${disp.chainName||''}</span>`;
         }
         html += `</div>`;
         html += `</div>`;
@@ -2634,8 +2656,6 @@ function showTurnSummary() {
     if (G._pendingAdvance) {
       btn.textContent = "Got it — end my turn";
     } else {
-      // Check if it will be my turn next
-      const nextIdx = (G.ci + 1) % G.players.length; // approximate
       btn.textContent = "Got it";
     }
   }
