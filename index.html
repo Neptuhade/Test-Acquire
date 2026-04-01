@@ -1513,6 +1513,21 @@ function execMerge(sv,acq,mtile,mm){
   G._lastMergerAcq=[].concat(acq);
   G._lastMergerBonusData=[].concat(bonusData);
 
+  // FIX 1: Push merger announcement AND updated player money/stocks to Firebase BEFORE disposal starts
+  // This ensures remote phones have correct bonus data before disposal modals appear.
+  // Initialize merger in turnSummary for tracking
+  turnSummary.merger={
+    survivor:{key:sv,name:CH[sv].name,icon:CH[sv].icon},
+    acquired:acq.map(k=>({key:k,name:CH[k].name,icon:CH[k].icon})),
+    bonuses:bonusData,
+    disposals:[]
+  };
+
+  if(G.isMP){
+    pushMergerAnnouncement();
+    writeMergerStateToFirebase();
+  }
+
   // Show announcement then run disposal (works same for solo and MP)
   showMergerModal(sv,acq,bonusData,()=>nextDisposal());
 }
@@ -1617,19 +1632,163 @@ function nextDisposal(){
     setTimeout(nextDisposal,300);
     return;
   }
+
+  // FIX 1: Handle remote disposal in MP mode
+  // If this is a remote player, write pendingDisposal to Firebase and wait for their response
+  if(G.isMP && p.id !== MP.playerId){
+    const sv=G.pendMerger.sv;
+    const sz=csz(k),pr=stockPrice(k,sz),qty=p.stocks[k];
+    const pairsAvailable=Math.min(Math.floor(qty/2),G.market[sv]);
+    const dispData={
+      playerId:p.id,
+      chainKey:k,
+      survivorKey:sv,
+      qty,
+      stockPrice:pr,
+      pairsAvailable,
+      survivorName:CH[sv].name,
+      survivorIcon:CH[sv].icon,
+      acquiredName:CH[k].name,
+      acquiredIcon:CH[k].icon,
+      timestamp:Date.now()
+    };
+    dbRef('games/'+G.roomCode+'/pendingDisposal').set(dispData);
+    // Listen for response on disposalResponse node
+    const responseListener=dbRef('games/'+G.roomCode+'/disposalResponse').on('value',snap=>{
+      const response=snap.val();
+      if(!response||response.playerId!==p.id||response.chainKey!==k)return;
+      // Apply the player's disposal choice on the mergemaker's phone
+      applyRemoteDisposalChoice(p,k,response.action);
+      // Clean up this listener
+      dbRef('games/'+G.roomCode+'/disposalResponse').off('value',responseListener);
+      // Advance to next disposal
+      G.pendMerger.dispQueue.shift();
+      nextDisposal();
+    });
+    return;
+  }
+
+  // Local player — show modal
   showStockDisposalModal(p,k,()=>{G.pendMerger.dispQueue.shift();nextDisposal();});
 }
 
 function aiDispose(p,k){
   const qty=p.stocks[k],sv=G.pendMerger.sv;
+  let action='sold';
+  let tradePairs=0;
   if(CH[sv].tier>=CH[k].tier&&qty>=2&&G.market[sv]>0){
     const pairs=Math.min(Math.floor(qty/2),G.market[sv]);
     p.stocks[k]-=pairs*2;G.market[k]+=pairs*2;
     p.stocks[sv]+=pairs;G.market[sv]-=pairs;
-    if(p.stocks[k]>0){const pr=stockPrice(k,csz(k));p.money+=p.stocks[k]*pr;G.market[k]+=p.stocks[k];p.stocks[k]=0;}
+    action='traded';
+    tradePairs=pairs;
+    if(p.stocks[k]>0){const pr=stockPrice(k,csz(k));p.money+=p.stocks[k]*pr;G.market[k]+=p.stocks[k];p.stocks[k]=0;action='traded_and_sold';}
   }else{
     const pr=stockPrice(k,csz(k));p.money+=qty*pr;G.market[k]+=qty;p.stocks[k]=0;
   }
+  // FIX 4: Track disposal in merger summary
+  if(turnSummary.merger){
+    turnSummary.merger.disposals.push({
+      playerName:p.name,
+      chainName:CH[k].name,
+      action:action,
+      qty,
+      amount:action.includes('sold')?qty*stockPrice(k,csz(k)):undefined,
+      pairs:tradePairs>0?tradePairs:undefined,
+      survivorName:action.includes('traded')?CH[G.pendMerger.sv].name:undefined
+    });
+  }
+}
+
+// FIX 1: Apply a remote player's disposal choice on the mergemaker's phone
+function applyRemoteDisposalChoice(p,k,action){
+  const qty=p.stocks[k],sv=G.pendMerger.sv;
+  const pr=stockPrice(k,csz(k));
+  let tradePairs=0;
+  if(action==='keep'){
+    // Keep all — do nothing to stocks
+  }else if(action==='sell'){
+    p.money+=qty*pr;
+    G.market[k]+=qty;
+    p.stocks[k]=0;
+    log2(`${p.name} sells ${qty} ${CH[k].name}`);
+  }else if(action==='trade'){
+    tradePairs=Math.min(Math.floor(qty/2),G.market[sv]);
+    if(tradePairs>0){
+      p.stocks[k]-=tradePairs*2;
+      G.market[k]+=tradePairs*2;
+      p.stocks[sv]+=tradePairs;
+      G.market[sv]-=tradePairs;
+      log2(`${p.name} trades for ${tradePairs} ${CH[sv].name}`);
+      if(qty-tradePairs*2>0){
+        const remainQty=qty-tradePairs*2;
+        p.money+=remainQty*pr;
+        G.market[k]+=remainQty;
+        p.stocks[k]=0;
+      }
+    }
+  }
+  // FIX 4: Track disposal in merger summary
+  if(turnSummary.merger){
+    turnSummary.merger.disposals.push({
+      playerName:p.name,
+      chainName:CH[k].name,
+      action:action==='keep'?'kept':action==='sell'?'sold':'traded',
+      qty,
+      amount:action==='sell'?qty*pr:undefined,
+      pairs:action==='trade'?tradePairs:undefined,
+      survivorName:action==='trade'?CH[sv].name:undefined
+    });
+  }
+}
+
+// FIX 1: Show remote disposal UI when this player is asked to dispose shares
+// Called on a non-mergemaker's phone via listenGameState
+function showRemoteDisposalUI(dispData){
+  // dispData: {playerId, chainKey, survivorKey, qty, stockPrice, pairsAvailable, survivorName, survivorIcon, acquiredName, acquiredIcon, timestamp}
+  const k=dispData.chainKey;
+  const sv=dispData.survivorKey;
+  const pr=dispData.stockPrice;
+  const qty=dispData.qty;
+  const pairs=dispData.pairsAvailable;
+
+  document.getElementById('msd-t').textContent=`${dispData.acquiredIcon} ${dispData.acquiredName} Acquired`;
+  document.getElementById('msd-s').textContent=`You — ${qty} share${qty>1?'s':''}`;
+  document.getElementById('msd-b').innerHTML=`Sell @ <strong>$${pr}/share</strong>`;
+  const o=document.getElementById('msd-o');o.innerHTML='';
+  const mk=(txt,fn)=>{const b=document.createElement('button');b.className='msb';b.textContent=txt;b.onclick=fn;o.appendChild(b);};
+
+  mk(`Keep all ${qty} (hope chain re-forms)`,()=>{
+    // Write response to Firebase
+    dbRef('games/'+G.roomCode+'/disposalResponse').set({
+      playerId:MP.playerId,
+      chainKey:k,
+      action:'keep',
+      timestamp:Date.now()
+    });
+    closeMo('msd');
+  });
+  mk(`💰 Sell all → +$${(qty*pr).toLocaleString()}`,()=>{
+    dbRef('games/'+G.roomCode+'/disposalResponse').set({
+      playerId:MP.playerId,
+      chainKey:k,
+      action:'sell',
+      timestamp:Date.now()
+    });
+    closeMo('msd');
+  });
+  if(qty>=2&&pairs>0){
+    mk(`🔄 Trade ${pairs*2} → ${pairs} ${dispData.survivorIcon} ${dispData.survivorName}`,()=>{
+      dbRef('games/'+G.roomCode+'/disposalResponse').set({
+        playerId:MP.playerId,
+        chainKey:k,
+        action:'trade',
+        timestamp:Date.now()
+      });
+      closeMo('msd');
+    });
+  }
+  document.getElementById('msd').classList.add('a');
 }
 
 function showStockDisposalModal(p,k,onDone){
@@ -1641,10 +1800,41 @@ function showStockDisposalModal(p,k,onDone){
   document.getElementById('msd-b').innerHTML=`Sell @ <strong>$${pr}/share</strong>`;
   const o=document.getElementById('msd-o');o.innerHTML='';
   const mk=(txt,fn)=>{const b=document.createElement('button');b.className='msb';b.textContent=txt;b.onclick=fn;o.appendChild(b);};
-  mk(`Keep all ${qty} (hope chain re-forms)`,()=>{closeMo('msd');onDone();});
+
+  // FIX 1 & 4: Helper to record disposal and optionally write to Firebase
+  const recordDisposal=(action)=>{
+    let tradePairs=0;
+    if(action==='trade')tradePairs=pairs;
+    if(turnSummary.merger){
+      turnSummary.merger.disposals.push({
+        playerName:p.name,
+        chainName:CH[k].name,
+        action:action==='keep'?'kept':action==='sell'?'sold':'traded',
+        qty,
+        amount:action==='sell'?qty*pr:undefined,
+        pairs:action==='trade'?tradePairs:undefined,
+        survivorName:action==='trade'?CH[sv].name:undefined
+      });
+    }
+    // If in MP and this is a remote player, write choice to Firebase
+    if(G.isMP && p.id !== MP.playerId){
+      dbRef('games/'+G.roomCode+'/disposalResponse').set({
+        playerId:p.id,
+        chainKey:k,
+        action,
+        timestamp:Date.now()
+      });
+    }
+  };
+
+  mk(`Keep all ${qty} (hope chain re-forms)`,()=>{
+    recordDisposal('keep');
+    closeMo('msd');onDone();
+  });
   mk(`💰 Sell all → +$${(qty*pr).toLocaleString()}`,()=>{
     p.money+=qty*pr;G.market[k]+=qty;p.stocks[k]=0;
     log2(`${p.name} sells ${qty} ${CH[k].name}`);
+    recordDisposal('sell');
     closeMo('msd');renderAll();onDone();
   });
   if(qty>=2&&G.market[sv]>0){
@@ -1652,6 +1842,7 @@ function showStockDisposalModal(p,k,onDone){
       p.stocks[k]-=pairs*2;G.market[k]+=pairs*2;
       p.stocks[sv]+=pairs;G.market[sv]-=pairs;
       log2(`${p.name} trades for ${pairs} ${CH[sv].name}`);
+      recordDisposal('trade');
       closeMo('msd');renderAll();onDone();
     });
   }
@@ -1674,8 +1865,9 @@ function finMerge(){
   // doesn't overwrite phase back to 'place' and freeze the game.
   afterPlace(G.players[G.ci]);
   renderAll();
+  // FIX 1: pushMergerAnnouncement now called in execMerge before disposal starts
+  // So we skip it here. writeMergerStateToFirebase still called to sync final state.
   if(G.isMP){
-    pushMergerAnnouncement();
     writeMergerStateToFirebase();
   }
 }
@@ -2376,6 +2568,61 @@ function showTurnSummary() {
   }
   html += '</div>';
 
+  // FIX 4: Merger details (if merger occurred this turn)
+  if (p.merger) {
+    html += `<div style="margin-bottom:8px;padding:8px;background:rgba(255,152,152,0.08);border-radius:3px;border-left:3px solid var(--red)">`;
+    html += `<div style="font-family:'Special Elite',cursive;font-size:9px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:5px">Merger</div>`;
+
+    // Acquired chains
+    html += `<div style="font-family:'Special Elite',cursive;font-size:9px;color:var(--bl);text-transform:uppercase;margin-bottom:4px">Acquired by ${p.merger.survivor.icon} ${p.merger.survivor.name}</div>`;
+    for(const acq of p.merger.acquired){
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:3px 6px;margin-bottom:3px;background:rgba(0,0,0,0.1);border-radius:2px">`;
+      html += `<span style="font-size:14px">${acq.icon}</span>`;
+      html += `<span style="font-size:11px">${acq.name}</span>`;
+      html += `</div>`;
+    }
+
+    // Bonuses
+    if(p.merger.bonuses && p.merger.bonuses.length > 0){
+      html += `<div style="font-family:'Special Elite',cursive;font-size:9px;color:var(--bl);text-transform:uppercase;margin:6px 0 4px">Bonuses</div>`;
+      for(const bd of p.merger.bonuses){
+        if(!bd.payouts || !bd.payouts.length) continue;
+        for(const payout of bd.payouts){
+          html += `<div style="display:flex;align-items:center;gap:6px;padding:3px 6px;margin-bottom:2px;background:rgba(201,162,39,0.1);border-radius:2px">`;
+          html += `<span style="font-family:'Special Elite',cursive;font-size:8px;color:var(--gold);min-width:50px">${payout.rank}</span>`;
+          html += `<span style="font-size:10px;flex:1">${payout.name}</span>`;
+          html += `<span style="font-family:'Playfair Display',serif;font-size:11px;font-weight:700;color:var(--gold)">+$${payout.amount.toLocaleString()}</span>`;
+          html += `</div>`;
+        }
+      }
+    }
+
+    // Disposal choices
+    if(p.merger.disposals && p.merger.disposals.length > 0){
+      html += `<div style="font-family:'Special Elite',cursive;font-size:9px;color:var(--bl);text-transform:uppercase;margin:6px 0 4px">Stock Disposals</div>`;
+      for(const disp of p.merger.disposals){
+        html += `<div style="padding:4px 6px;margin-bottom:3px;background:rgba(0,0,0,0.1);border-radius:2px;font-size:10px">`;
+        html += `<div style="display:flex;align-items:center;gap:6px">`;
+        html += `<span>${disp.playerName} —</span>`;
+        if(disp.action === 'kept'){
+          html += `<span>kept ${disp.qty} ${disp.chainName}</span>`;
+        }else if(disp.action === 'sold'){
+          html += `<span>sold ${disp.qty} ${disp.chainName} for $${disp.amount.toLocaleString()}</span>`;
+        }else if(disp.action === 'traded'){
+          html += `<span>traded ${disp.qty} ${disp.chainName} for ${disp.pairs} ${disp.survivorName}`;
+          if(disp.qty > disp.pairs*2){
+            html += ` + sold remainder for $${((disp.qty - disp.pairs*2) * (p.merger.disposals[0].amount ? p.merger.disposals[0].amount / p.merger.disposals[0].qty : 0)).toLocaleString()}`;
+          }
+          html += `</span>`;
+        }
+        html += `</div>`;
+        html += `</div>`;
+      }
+    }
+
+    html += '</div>';
+  }
+
   // Reminder
   html += `<div style="font-family:'Special Elite',cursive;font-size:9px;color:var(--bl);text-align:center;letter-spacing:1px;font-style:italic">Note what you've seen. Once you close this, it's gone. Check the Log tab to review turn history.</div>`;
 
@@ -2860,7 +3107,14 @@ function applyMPState(state,code){
     var ps = psSnap.val() || {};
     for (var i = 0; i < G.players.length; i++) {
       var p = G.players[i];
-      if (ps[p.id]) { p.money = ps[p.id].money; p.stocks = ps[p.id].stocks; }
+      // FIX 3: Skip overwriting player money/stocks if a merger is in progress on this phone
+      // The local merger bonus + disposal data is more current than Firebase during merger.
+      // Also skip if localPhaseAhead (mergemaker's local money is ahead of Firebase).
+      if (!ps[p.id]) continue;
+      if (!!G.pendMerger) continue; // Merger in progress — keep local data
+      if (localPhaseAhead) continue; // We're ahead of Firebase — keep local data
+      p.money = ps[p.id].money;
+      p.stocks = ps[p.id].stocks;
     }
     return dbRef('games/'+code+'/hands/'+MP.playerId).once('value');
   }).then(function(handSnap) {
@@ -2881,10 +3135,18 @@ function applyMPState(state,code){
     // Don't stomp on the active player's buy phase
     if (localPhaseAhead) return;
 
+    // FIX 2: Only call startTurn() when phase is 'place'. After merger, phase is 'buy'
+    // so we just update UI to show buy options, not place a new tile.
     if (cur().id === MP.playerId) {
       G.sel = null;
       toast('Your turn!');
-      startTurn();
+      if(G.phase === 'place'){
+        startTurn();
+      }else{
+        // In buy phase — just update UI, don't start placement
+        updBtns();
+        renderHand();
+      }
     } else {
       updBtns();
       document.getElementById('tlbl').textContent = 'WAITING';
@@ -2930,6 +3192,20 @@ function listenGameState(code) {
     var bonusData = data.bonusData || [];
     if (sv == null || !acq.length) return;
     showMergerModal(sv, acq, bonusData, function(){ /* no-op — disposal ran on mergemaker's phone */ });
+  });
+
+  // FIX 1: Listen for pending disposal requests on this player's phone
+  // When mergemaker writes a disposal request to Firebase, this player shows a modal to choose
+  var shownDisposalTs = 0;
+  dbRef('games/'+code+'/pendingDisposal').on('value', snap => {
+    const dispData = snap.val();
+    if (!dispData || !dispData.timestamp) return;
+    if (dispData.timestamp <= shownDisposalTs) return; // already showed this one
+    // Only show if this disposal is for ME
+    if (dispData.playerId !== MP.playerId) return;
+    shownDisposalTs = dispData.timestamp;
+    // Show remote disposal UI on this phone
+    showRemoteDisposalUI(dispData);
   });
 }
 
