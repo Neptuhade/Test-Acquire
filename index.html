@@ -3252,13 +3252,54 @@ function writeMoveToFirebase(updatedG) {
 }
 
 // ── PUSH TURN SUMMARY TO FIREBASE ──
+function sanitizeTurnSummaryForFirebase(summary) {
+  // Firebase rejects undefined values. Replace with safe defaults.
+  const clean = {
+    player: summary.player || 'Player',
+    tile: summary.tile || null,
+    action: summary.action || null,
+    chain: summary.chain || null,
+    stocks: (summary.stocks || []).map(s => ({
+      chain: s.chain || '',
+      qty: s.qty || 0,
+      price: s.price || 0
+    })),
+    merger: summary.merger ? {
+      survivor: summary.merger.survivor || { key: '', name: '', icon: '' },
+      acquired: (summary.merger.acquired || []).map(a => ({
+        key: a.key || '',
+        name: a.name || '',
+        icon: a.icon || ''
+      })),
+      bonuses: (summary.merger.bonuses || []).map(b => ({
+        payouts: (b.payouts || []).map(p => ({
+          rank: p.rank || '',
+          name: p.name || '',
+          amount: p.amount || 0
+        }))
+      })),
+      disposals: (summary.merger.disposals || []).map(d => ({
+        playerName: d.playerName || 'Player',
+        chainName: d.chainName || '',
+        action: d.action || 'unknown',
+        qty: d.qty || 0,
+        amount: d.amount !== undefined ? d.amount : 0,
+        pairs: d.pairs !== undefined ? d.pairs : 0,
+        survivorName: d.survivorName || ''
+      }))
+    } : null
+  };
+  return clean;
+}
+
 function pushTurnSummaryToFirebase() {
   if (!G.isMP) return;
   const code = G.roomCode;
+  const cleanSummary = sanitizeTurnSummaryForFirebase(turnSummary);
   return dbRef(`games/${code}/lastTurnSummary`).set({
     playerId: MP.playerId,
     playerName: (G.players.find(p=>p.id===MP.playerId)||{}).name || 'Player',
-    data: turnSummary,
+    data: cleanSummary,
     timestamp: Date.now()
   });
 }
