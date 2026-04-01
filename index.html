@@ -1,0 +1,3100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Utah Acquire</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Cinzel:wght@400;600&family=Playfair+Display:wght@400;700;900&family=Special+Elite&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Board colors — original game palette */
+  --cream:#F5F0DC;        /* ivory board surface */
+  --aged:#EDE8CC;         /* slightly darker ivory */
+  --parchment:#D4C98A;    /* worn parchment */
+  --bd:#3E2008;           /* dark walnut brown — tile holder */
+  --bm:#6B3A1F;           /* mid brown */
+  --bl:#9E6B3A;           /* light brown */
+  --gold:#E8B800;         /* game money gold */
+  --goldl:#FFD740;        /* highlight gold */
+  --red:#8B1A1A;          /* danger red */
+  --gd:#1B5E20;           /* dark green felt */
+  /* Chain colors — exact original game card colors */
+  --kanab:#F5C518;        /* Tower — yellow */
+  --moab:#C8102E;         /* Luxor — crimson red */
+  --silicon:#2E7D32;      /* Festival — forest green */
+  --layton:#00838F;       /* Worldwide — teal */
+  --stg:#E8720C;          /* American — orange */
+  --park:#6A1B9A;         /* Imperial — purple */
+  --slc:#1565C0;          /* Continental — blue */
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bd);font-family:'Libre Baskerville',serif;color:var(--cream);min-height:100vh;overflow-x:hidden}
+.screen{display:none;min-height:100vh}
+.screen.active{display:flex;flex-direction:column}
+
+/* SETUP */
+#ss{background:var(--bd);background-image:radial-gradient(ellipse at 20% 20%,rgba(201,162,39,.1),transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(139,26,26,.1),transparent 60%);align-items:center;justify-content:center;padding:24px 20px;overflow-y:auto}
+.sc{background:var(--cream);border:3px solid var(--bd);border-radius:4px;padding:28px 24px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,.6);position:relative}
+.sc::before{content:'';position:absolute;inset:6px;border:1px solid var(--parchment);border-radius:2px;pointer-events:none}
+.lt{text-align:center;margin-bottom:20px}
+.lt-t{font-family:'Playfair Display',serif;font-size:36px;font-weight:900;color:var(--bd);letter-spacing:2px;text-transform:uppercase;line-height:1}
+.lt-s{font-family:'Special Elite',cursive;font-size:12px;color:var(--bm);letter-spacing:4px;text-transform:uppercase;margin-top:4px}
+.ld{width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:10px 0}
+.fl{margin-bottom:18px}
+.flb{font-family:'Special Elite',cursive;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--bm);margin-bottom:6px;display:block}
+.fi{width:100%;background:var(--cream);border:2px solid var(--parchment);border-radius:3px;padding:10px 14px;font-family:'Libre Baskerville',serif;font-size:15px;color:var(--bd);outline:none}
+.fi:focus{border-color:var(--gold)}
+.bg{display:flex;gap:6px;flex-wrap:wrap}
+.bo{flex:1;min-width:50px;padding:8px 10px;background:var(--cream);border:2px solid var(--parchment);border-radius:3px;font-family:'Special Elite',cursive;font-size:11px;color:var(--bm);cursor:pointer;text-align:center;transition:all .15s}
+.bo.sel{background:var(--bd);border-color:var(--gold);color:var(--gold)}
+.bp{width:100%;padding:14px;background:var(--bd);border:2px solid var(--gold);border-radius:3px;font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--gold);cursor:pointer;letter-spacing:2px;text-transform:uppercase;margin-top:6px;transition:all .2s}
+.bp:active{background:var(--bm);transform:scale(.98)}
+
+/* CHAIN PREVIEW in setup */
+.chain-preview{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.cp-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:3px;background:rgba(62,32,8,0.85)}
+.cp-icon{font-size:16px;flex-shrink:0}
+.cp-name{font-family:'Special Elite',cursive;font-size:9px;color:var(--cream);letter-spacing:.5px;line-height:1.3}
+.cp-tier{font-family:'Special Elite',cursive;font-size:8px;opacity:.6;letter-spacing:.5px}
+
+/* GAME */
+#sg{background:var(--bd);height:100vh;overflow:hidden}
+.gh{background:var(--bd);border-bottom:2px solid var(--bm);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.gt{font-family:'Playfair Display',serif;font-size:16px;font-weight:900;color:var(--gold);letter-spacing:1px}
+.ti{font-family:'Special Elite',cursive;font-size:11px;color:var(--cream);text-align:right}
+.tn{color:var(--gold);font-size:13px;font-family:'Playfair Display',serif;font-weight:700}
+.tbc{height:3px;background:var(--bm);flex-shrink:0}
+.tb{height:100%;background:var(--gold);transition:width 1s linear}
+.tb.warn{background:var(--red)}
+
+/* CHAIN LEGEND - full names, scrollable */
+.cl{display:flex;flex-direction:column;gap:0;flex-shrink:0;background:rgba(0,0,0,.4);border-bottom:2px solid var(--bm);max-height:0;overflow:hidden;transition:max-height .3s}
+.cl.open{max-height:300px}
+.cl-row{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px}
+.cc{display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:3px;white-space:nowrap;flex-shrink:0;border:1px solid transparent;cursor:pointer;transition:all .15s;min-width:0}
+.cc.ac{border-color:rgba(255,255,255,.5);background:rgba(255,255,255,.05)}
+.cc-icon{font-size:14px;flex-shrink:0;line-height:1}
+.cc-info{display:flex;flex-direction:column;min-width:0}
+.cc-name{font-family:'Special Elite',cursive;font-size:9px;color:var(--cream);text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.cc-detail{font-family:'Special Elite',cursive;font-size:8px;color:var(--goldl);white-space:nowrap}
+
+/* LEGEND TOGGLE BAR - always visible */
+.legend-bar{display:flex;flex-direction:row;align-items:center;gap:0;padding:4px 8px;background:rgba(0,0,0,.5);border-bottom:1px solid var(--bm);flex-shrink:0;overflow-x:auto;scrollbar-width:none;cursor:pointer;white-space:nowrap}
+.legend-bar::-webkit-scrollbar{display:none}
+.lb-chip{display:inline-flex;align-items:center;gap:3px;padding:3px 6px;border-radius:2px;white-space:nowrap;flex-shrink:0;margin-right:2px}
+.lb-icon{font-size:16px;line-height:1}
+.lb-sz{font-family:'Special Elite',cursive;font-size:8px;color:var(--goldl)}
+.lb-expand{margin-left:auto;font-family:'Special Elite',cursive;font-size:9px;color:var(--bl);padding-left:8px;flex-shrink:0}
+
+.bc{flex:1;overflow:auto;padding:4px;display:flex;align-items:flex-start;justify-content:flex-start;-webkit-overflow-scrolling:touch}
+.board{display:grid;grid-template-columns:repeat(12,minmax(42px,1fr));gap:1px;background:var(--bm);padding:2px;border:2px solid var(--gold);border-radius:3px;width:100%}
+.tile{aspect-ratio:1;background:var(--aged);border-radius:1px;display:flex;align-items:center;justify-content:center;font-family:'Oswald','Special Elite',cursive;font-size:14px;font-weight:700;color:var(--bm);cursor:pointer;transition:all .15s;position:relative;border:1px solid var(--parchment);user-select:none;-webkit-user-select:none;flex-direction:column;gap:0;line-height:1;overflow:hidden}
+.tile:active{transform:scale(.9)}
+.tile.playable{background:var(--cream);border-color:var(--gold);color:var(--bd);box-shadow:0 0 6px rgba(201,162,39,.5)}
+.tile.placed{background:var(--bm);color:var(--cream);cursor:default;border-color:var(--bm)}
+.tile.ck{background:var(--kanab);color:#fff;border-color:var(--kanab)}
+.tile.cm{background:var(--moab);color:#fff;border-color:var(--moab)}
+.tile.cs{background:var(--silicon);color:#fff;border-color:var(--silicon)}
+.tile.cl2{background:var(--layton);color:#fff;border-color:var(--layton)}
+.tile.cg{background:var(--stg);color:#fff;border-color:var(--stg)}
+.tile.cp{background:var(--park);color:#fff;border-color:var(--park)}
+.tile.cc2{background:var(--slc);color:#fff;border-color:var(--slc)}
+.tile.hq .hq-icon{font-size:16px;line-height:1;display:block}
+.tile.hq .tile-id{font-size:10px}
+.tile-id{font-size:14px;line-height:1;font-weight:700;letter-spacing:-0.3px}
+.tile.ih{background:linear-gradient(135deg,#e8f4e8,#c8e8c8);border-color:#4a8a4a;color:#1a4a1a;animation:ph 2s infinite}
+@keyframes ph{0%,100%{box-shadow:0 0 4px rgba(74,138,74,.4)}50%{box-shadow:0 0 10px rgba(74,138,74,.8)}}
+.tile.sel-h{background:var(--gold);border-color:var(--gold);color:var(--bd);transform:translateY(-2px);box-shadow:0 4px 10px rgba(201,162,39,.5)}
+
+.bp2{background:rgba(62,32,8,0.97);border-top:2px solid var(--bm);flex-shrink:0;max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pts{display:flex;border-bottom:1px solid var(--bm)}
+.pt{flex:1;padding:8px 2px;font-family:'Special Elite',cursive;font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--bl);text-align:center;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.pt.a{color:var(--gold);border-bottom-color:var(--gold)}
+.pc{padding:10px;display:none}
+.pc.a{display:block}
+.hg{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:8px}
+.ht{aspect-ratio:1;background:var(--cream);border:2px solid var(--parchment);border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:'Oswald','Special Elite',cursive;font-size:clamp(14px,4vw,22px);color:var(--bd);cursor:pointer;transition:all .15s;font-weight:700;letter-spacing:-0.3px}
+.ht:active{transform:scale(.9)}
+.ht.sel{background:var(--gold);border-color:var(--gold);color:var(--bd);transform:translateY(-3px);box-shadow:0 4px 12px rgba(201,162,39,.5)}
+.ht.up{background:var(--parchment);color:var(--bl);opacity:.5;cursor:not-allowed;text-decoration:line-through}
+.ht.em{background:transparent;border-style:dashed;border-color:var(--bm);cursor:default}
+.ar{display:flex;gap:6px;margin-top:6px}
+.ba{flex:1;padding:10px 6px;border-radius:3px;font-family:'Special Elite',cursive;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .15s;border:2px solid}
+.ba:active{transform:scale(.96)}
+.ba:disabled{opacity:.35;cursor:not-allowed}
+.bpl{background:var(--gd);border-color:#4a9a6a;color:#9aeac0}
+.bbu{background:var(--bm);border-color:var(--gold);color:var(--gold)}
+.bet{background:var(--red);border-color:#e85050;color:#ffc0c0}
+.sg2{display:flex;flex-direction:column;gap:5px}
+.sr{display:flex;align-items:center;gap:6px;padding:8px 10px;background:rgba(0,0,0,.2);border-radius:3px;border-left:4px solid transparent}
+.sn{font-family:'Special Elite',cursive;font-size:9px;color:var(--cream);flex:1;text-transform:uppercase;letter-spacing:.5px}
+.sp{font-family:'Playfair Display',serif;font-size:11px;color:var(--gold);font-weight:700;min-width:44px;text-align:right}
+.sc2{font-family:'Special Elite',cursive;font-size:9px;color:var(--parchment);min-width:36px;text-align:center}
+.scg{display:flex;flex-direction:column;gap:5px}
+.scr{display:flex;align-items:center;gap:8px;padding:7px 8px;background:rgba(0,0,0,.2);border-radius:3px}
+.scr.cp2{background:rgba(201,162,39,.15);border:1px solid rgba(201,162,39,.3)}
+.sca{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:12px;font-weight:700;flex-shrink:0}
+.scn{font-family:'Special Elite',cursive;font-size:10px;color:var(--cream);flex:1;text-transform:uppercase;letter-spacing:.5px}
+.scm{font-family:'Playfair Display',serif;font-size:13px;color:var(--gold);font-weight:700}
+.scp{display:flex;gap:2px;flex-wrap:wrap}
+.pip{width:6px;height:6px;border-radius:50%}
+.gl{padding:6px 8px;max-height:110px;overflow-y:auto}
+.le{font-family:'Special Elite',cursive;font-size:10px;color:var(--parchment);padding:2px 0;border-bottom:1px solid rgba(255,255,255,.05);line-height:1.4}
+.le.imp{color:var(--goldl)}
+.le.mer{color:#ff9999}
+.ait{font-family:'Special Elite',cursive;font-size:11px;color:var(--gold);text-align:center;padding:6px;letter-spacing:2px;animation:bl 1s infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.3}}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
+.mo.a{display:flex}
+.md{background:var(--aged);border:3px solid var(--bm);border-radius:4px;padding:22px 18px;width:100%;max-width:360px;position:relative;max-height:90vh;overflow-y:auto}
+.md::before{content:'';position:absolute;inset:5px;border:1px solid var(--parchment);border-radius:2px;pointer-events:none}
+.mt{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;color:var(--bd);text-align:center;margin-bottom:3px}
+.ms{font-family:'Special Elite',cursive;font-size:10px;color:var(--bm);text-align:center;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
+.mb{font-family:'Libre Baskerville',serif;font-size:13px;color:var(--bd);margin-bottom:14px;line-height:1.5}
+.mco{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.mcb{padding:10px 12px;border-radius:3px;border:2px solid var(--parchment);background:var(--cream);font-family:'Special Elite',cursive;font-size:11px;color:var(--bd);cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px;transition:all .15s}
+.mcb:active{transform:scale(.98)}
+.mcb-icon{font-size:18px;flex-shrink:0}
+.mso{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.msb{padding:10px 12px;border-radius:3px;border:2px solid var(--parchment);background:var(--cream);font-family:'Special Elite',cursive;font-size:11px;color:var(--bd);cursor:pointer;transition:all .15s}
+.msb:active{background:var(--parchment)}
+.bqr{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--parchment)}
+.qc{display:flex;align-items:center;gap:8px}
+.qb{width:28px;height:28px;border-radius:50%;border:2px solid var(--bm);background:var(--cream);font-size:16px;color:var(--bd);cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:bold}
+.qn{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:var(--bd);min-width:20px;text-align:center}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bd);border:2px solid var(--gold);border-radius:4px;padding:10px 18px;font-family:'Special Elite',cursive;font-size:11px;color:var(--gold);letter-spacing:1px;z-index:200;transition:transform .3s ease;white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
+#se{background:var(--bd);align-items:center;justify-content:center;padding:24px 20px}
+.ec{background:var(--aged);border:3px solid var(--gold);border-radius:4px;padding:26px 22px;width:100%;max-width:360px;text-align:center}
+.et{font-family:'Playfair Display',serif;font-size:30px;font-weight:900;color:var(--bd);margin-bottom:3px}
+.esub{font-family:'Special Elite',cursive;font-size:10px;color:var(--bm);letter-spacing:3px;text-transform:uppercase;margin-bottom:18px}
+.er{display:flex;flex-direction:column;gap:7px;margin-bottom:18px}
+.err{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--cream);border-radius:3px;border:2px solid var(--parchment)}
+.err.win{border-color:var(--gold);background:rgba(201,162,39,.1)}
+.erk{font-family:'Playfair Display',serif;font-size:19px;font-weight:900;color:var(--bm);width:26px}
+.erk.g{color:var(--gold)}
+.ern{font-family:'Special Elite',cursive;font-size:12px;color:var(--bd);flex:1;text-align:left;text-transform:uppercase}
+.erm{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--bd)}
+/* Sound toggle */
+.sound-btn{background:none;border:1px solid var(--bl);border-radius:3px;padding:3px 8px;font-size:14px;cursor:pointer;color:var(--cream)}
+
+/* ═══ SIDE DRAWER ═══ */
+.drawer-handle {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 50;
+  background: var(--gold);
+  color: var(--bd);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: 'Special Elite', cursive;
+  font-size: 9px;
+  letter-spacing: 2px;
+  padding: 10px 4px;
+  border-radius: 4px 0 0 4px;
+  cursor: pointer;
+  box-shadow: -2px 0 8px rgba(0,0,0,0.4);
+  transition: right 0.3s;
+  user-select: none;
+}
+.drawer-handle.open { right: 260px; }
+
+.side-drawer {
+  position: fixed;
+  right: -270px;
+  top: 0;
+  width: 260px;
+  height: 100vh;
+  background: var(--bd);
+  border-left: 2px solid var(--gold);
+  z-index: 49;
+  transition: right 0.3s ease;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 10px;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.6);
+}
+.side-drawer.open { right: 0; }
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 48;
+  display: none;
+}
+.drawer-overlay.open { display: block; }
+
+.drawer-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 4px;
+  letter-spacing: 1px;
+}
+.drawer-name {
+  font-family: 'Special Elite', cursive;
+  font-size: 10px;
+  color: var(--bl);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--bm);
+}
+.drawer-money {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--goldl);
+  text-align: center;
+  padding: 12px;
+  background: rgba(201,162,39,0.1);
+  border: 1px solid var(--gold);
+  border-radius: 3px;
+  margin-bottom: 12px;
+}
+.drawer-money-label {
+  font-family: 'Special Elite', cursive;
+  font-size: 9px;
+  color: var(--bl);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 2px;
+}
+.drawer-section-title {
+  font-family: 'Special Elite', cursive;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--bl);
+  margin-bottom: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--bm);
+}
+.drawer-stock-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 3px;
+  margin-bottom: 4px;
+  background: rgba(0,0,0,0.2);
+  border-left: 3px solid transparent;
+}
+.drawer-stock-icon { font-size: 14px; flex-shrink: 0; }
+.drawer-stock-info { flex: 1; min-width: 0; }
+.drawer-stock-name {
+  font-family: 'Special Elite', cursive;
+  font-size: 9px;
+  color: var(--cream);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.drawer-stock-detail {
+  font-family: 'Special Elite', cursive;
+  font-size: 8px;
+  color: var(--bl);
+}
+.drawer-stock-qty {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.drawer-net-worth {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 3px;
+  border: 1px solid var(--bm);
+  text-align: center;
+}
+.drawer-net-label {
+  font-family: 'Special Elite', cursive;
+  font-size: 9px;
+  color: var(--bl);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 2px;
+}
+.drawer-net-value {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--goldl);
+}
+
+/* ═══ PRICE REFERENCE TAB ═══ */
+.price-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Special Elite', cursive;
+  font-size: 8px;
+}
+.price-table th {
+  padding: 4px 2px;
+  text-align: center;
+  color: var(--cream);
+  font-size: 9px;
+  letter-spacing: 0.3px;
+  border-bottom: 2px solid var(--bm);
+  white-space: nowrap;
+}
+.price-table th.chain-header {
+  font-size: 11px;
+  padding: 4px 3px;
+}
+.price-table td {
+  padding: 3px 2px;
+  text-align: center;
+  color: var(--parchment);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 8px;
+}
+.price-table td.size-col {
+  color: var(--bl);
+  font-size: 8px;
+  padding-right: 4px;
+  white-space: nowrap;
+}
+.price-table tr.current-size td {
+  background: rgba(201,162,39,0.2);
+  font-weight: bold;
+  color: var(--goldl);
+}
+.price-table tr.current-size td.size-col { color: var(--gold); }
+.price-table td.price-cell {
+  border-radius: 2px;
+  min-width: 28px;
+}
+.price-table td.price-cell.active-chain {
+  color: #fff;
+  font-weight: bold;
+}
+.bonus-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Special Elite', cursive;
+  font-size: 8px;
+  margin-top: 10px;
+}
+.bonus-table th {
+  padding: 3px 2px;
+  text-align: center;
+  color: var(--cream);
+  font-size: 8px;
+  border-bottom: 1px solid var(--bm);
+}
+.bonus-table td {
+  padding: 2px;
+  text-align: center;
+  color: var(--parchment);
+  font-size: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.price-section-label {
+  font-family: 'Special Elite', cursive;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--bl);
+  margin: 8px 0 4px;
+  border-top: 1px solid var(--bm);
+  padding-top: 8px;
+}
+/* ═══ LOBBY SCREEN ═══ */
+#sl {
+  background: #0d3535;
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: flex-start;
+}
+.lobby-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(180deg, #0a2828 0%, #1B6B6B 40%, #134f4f 100%);
+}
+.skyline-svg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  opacity: 0.85;
+}
+.lobby-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 20px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+}
+/* Title block — mimics box cover */
+.lobby-title-block {
+  text-align: center;
+  margin-bottom: 24px;
+  width: 100%;
+  padding: 0 8px;
+}
+.lobby-rule-top {
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #F0EDD8, #4DC8A0, #F0EDD8, transparent);
+  margin-bottom: 12px;
+}
+.lobby-rule-bottom {
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #F0EDD8, #4DC8A0, #F0EDD8, transparent);
+  margin-top: 10px;
+  margin-bottom: 8px;
+}
+.lobby-title {
+  font-family: 'Oswald', 'Bebas Neue', sans-serif;
+  font-size: clamp(42px, 12vw, 72px);
+  font-weight: 700;
+  color: #F0EDD8;
+  letter-spacing: 8px;
+  line-height: 1;
+  text-shadow: 0 0 40px rgba(77,200,160,0.4), 2px 2px 0 rgba(0,0,0,0.5);
+  text-transform: uppercase;
+}
+.lobby-tagline {
+  font-family: 'Cinzel', 'Libre Baskerville', serif;
+  font-size: clamp(9px, 2.5vw, 13px);
+  color: #4DC8A0;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+.lobby-copyright {
+  font-family: 'Special Elite', cursive;
+  font-size: 9px;
+  color: rgba(240,237,216,0.4);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+/* Main card */
+.lobby-card {
+  background: rgba(10,30,30,0.88);
+  border: 2px solid rgba(77,200,160,0.5);
+  border-radius: 4px;
+  padding: 24px 20px;
+  width: 100%;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(77,200,160,0.1);
+  position: relative;
+}
+.lobby-card::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(77,200,160,0.2);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.lobby-card-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #4DC8A0;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 18px;
+}
+/* Lobby buttons */
+.lobby-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: all 0.15s;
+  border: 2px solid;
+}
+.lobby-btn:active { transform: scale(0.98); }
+.lobby-btn-primary {
+  background: #1B6B6B;
+  border-color: #4DC8A0;
+  color: #F0EDD8;
+}
+.lobby-btn-primary:hover { background: #226060; }
+.lobby-btn-secondary {
+  background: rgba(26,43,74,0.8);
+  border-color: #8BB89A;
+  color: #F0EDD8;
+}
+.lobby-btn-secondary:hover { background: rgba(26,43,74,1); }
+.lobby-btn-ghost {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.2);
+  color: rgba(240,237,216,0.7);
+}
+.lbtn-icon { font-size: 24px; flex-shrink: 0; }
+.lbtn-text { text-align: left; }
+.lbtn-main {
+  font-family: 'Oswald', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.lbtn-sub {
+  font-family: 'Special Elite', cursive;
+  font-size: 9px;
+  opacity: 0.7;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+.lobby-divider {
+  text-align: center;
+  font-family: 'Special Elite', cursive;
+  font-size: 10px;
+  color: rgba(240,237,216,0.4);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin: 4px 0 10px;
+}
+/* Forms */
+.lform-group { margin-bottom: 14px; }
+.lform-label {
+  font-family: 'Special Elite', cursive;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #8BB89A;
+  display: block;
+  margin-bottom: 6px;
+}
+.lform-input {
+  width: 100%;
+  background: rgba(255,255,255,0.07);
+  border: 2px solid rgba(77,200,160,0.3);
+  border-radius: 3px;
+  padding: 10px 14px;
+  font-family: 'Libre Baskerville', serif;
+  font-size: 15px;
+  color: #F0EDD8;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.lform-input:focus { border-color: #4DC8A0; }
+.lform-input::placeholder { color: rgba(240,237,216,0.3); }
+.lbtn-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.lopt {
+  flex: 1;
+  min-width: 55px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.05);
+  border: 2px solid rgba(77,200,160,0.25);
+  border-radius: 3px;
+  font-family: 'Special Elite', cursive;
+  font-size: 11px;
+  color: rgba(240,237,216,0.7);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+  line-height: 1.3;
+}
+.lopt.sel {
+  background: #1B6B6B;
+  border-color: #4DC8A0;
+  color: #F0EDD8;
+}
+/* Room code display */
+.lobby-room-code-block {
+  text-align: center;
+  padding: 16px;
+  background: rgba(77,200,160,0.08);
+  border: 2px solid rgba(77,200,160,0.4);
+  border-radius: 3px;
+  margin-bottom: 16px;
+}
+.lobby-room-label {
+  font-family: 'Special Elite', cursive;
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: #8BB89A;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.lobby-room-code {
+  font-family: 'Oswald', sans-serif;
+  font-size: 48px;
+  font-weight: 700;
+  color: #4DC8A0;
+  letter-spacing: 10px;
+  text-shadow: 0 0 20px rgba(77,200,160,0.5);
+  line-height: 1;
+}
+.lobby-room-hint {
+  font-family: 'Special Elite', cursive;
+  font-size: 10px;
+  color: rgba(240,237,216,0.5);
+  letter-spacing: 1px;
+  margin-top: 6px;
+}
+.lobby-copy-btn {
+  margin-top: 10px;
+  padding: 6px 16px;
+  background: rgba(77,200,160,0.15);
+  border: 1px solid rgba(77,200,160,0.4);
+  border-radius: 3px;
+  font-family: 'Special Elite', cursive;
+  font-size: 10px;
+  color: #4DC8A0;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+/* Player list */
+.lobby-players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.lobby-player-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 3px;
+  border-left: 3px solid #4DC8A0;
+  animation: playerJoin 0.3s ease;
+}
+@keyframes playerJoin {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.lobby-player-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Oswald', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.lobby-player-name {
+  font-family: 'Special Elite', cursive;
+  font-size: 12px;
+  color: #F0EDD8;
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.lobby-player-tag {
+  font-family: 'Special Elite', cursive;
+  font-size: 9px;
+  color: #4DC8A0;
+  letter-spacing: 1px;
+}
+.lobby-waiting-note {
+  font-family: 'Special Elite', cursive;
+  font-size: 10px;
+  color: rgba(240,237,216,0.5);
+  text-align: center;
+  letter-spacing: 2px;
+  animation: pulse-note 2s infinite;
+}
+@keyframes pulse-note { 0%,100%{opacity:0.5} 50%{opacity:1} }
+.lobby-spinner {
+  text-align: center;
+  font-size: 24px;
+  margin-top: 12px;
+  animation: spin-slow 3s linear infinite;
+}
+@keyframes spin-slow { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+.lobby-back {
+  font-family: 'Special Elite', cursive;
+  font-size: 10px;
+  color: #8BB89A;
+  letter-spacing: 1px;
+  cursor: pointer;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.lobby-back:hover { color: #4DC8A0; }
+.lobby-error {
+  font-family: 'Special Elite', cursive;
+  font-size: 11px;
+  color: #ff6b6b;
+  text-align: center;
+  margin-top: 8px;
+  letter-spacing: 1px;
+  min-height: 20px;
+}
+
+</style>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+
+<!-- SETUP -->
+<!-- LOBBY SCREEN -->
+<div id="sl" class="screen active">
+  <!-- SVG City Skyline Background -->
+  <div class="lobby-bg">
+    <svg class="skyline-svg" viewBox="0 0 800 300" preserveAspectRatio="xMidYMax meet" xmlns="http://www.w3.org/2000/svg">
+      <!-- Far background buildings -->
+      <rect x="0" y="180" width="800" height="120" fill="#0d3d3d"/>
+      <!-- Building silhouettes - far layer -->
+      <rect x="20" y="140" width="30" height="160" fill="#0f4a4a"/>
+      <rect x="55" y="120" width="20" height="180" fill="#0f4a4a"/>
+      <rect x="80" y="150" width="40" height="150" fill="#0f4a4a"/>
+      <rect x="130" y="100" width="25" height="200" fill="#0f4a4a"/>
+      <rect x="130" y="85" width="25" height="20" fill="#0f4a4a"/>
+      <rect x="162" y="130" width="35" height="170" fill="#0f4a4a"/>
+      <rect x="205" y="110" width="50" height="190" fill="#0f4a4a"/>
+      <rect x="225" y="90" width="12" height="25" fill="#0f4a4a"/>
+      <rect x="265" y="140" width="30" height="160" fill="#0f4a4a"/>
+      <rect x="305" y="115" width="45" height="185" fill="#0f4a4a"/>
+      <rect x="360" y="130" width="28" height="170" fill="#0f4a4a"/>
+      <rect x="398" y="105" width="55" height="195" fill="#0f4a4a"/>
+      <rect x="418" y="88" width="14" height="22" fill="#0f4a4a"/>
+      <rect x="462" y="135" width="32" height="165" fill="#0f4a4a"/>
+      <rect x="505" y="118" width="42" height="182" fill="#0f4a4a"/>
+      <rect x="558" y="145" width="25" height="155" fill="#0f4a4a"/>
+      <rect x="592" y="108" width="48" height="192" fill="#0f4a4a"/>
+      <rect x="650" y="125" width="35" height="175" fill="#0f4a4a"/>
+      <rect x="695" y="138" width="30" height="162" fill="#0f4a4a"/>
+      <rect x="735" y="112" width="45" height="188" fill="#0f4a4a"/>
+      <!-- Mid layer - lighter teal -->
+      <rect x="0" y="200" width="800" height="100" fill="#134f4f"/>
+      <rect x="10" y="165" width="22" height="135" fill="#165858"/>
+      <rect x="40" y="148" width="18" height="152" fill="#165858"/>
+      <rect x="68" y="172" width="35" height="128" fill="#165858"/>
+      <rect x="112" y="155" width="28" height="145" fill="#165858"/>
+      <rect x="150" y="142" width="22" height="158" fill="#165858"/>
+      <rect x="185" y="158" width="40" height="142" fill="#165858"/>
+      <rect x="238" y="145" width="32" height="155" fill="#165858"/>
+      <rect x="282" y="160" width="45" height="140" fill="#165858"/>
+      <rect x="340" y="148" width="20" height="152" fill="#165858"/>
+      <rect x="372" y="138" width="38" height="162" fill="#165858"/>
+      <rect x="425" y="152" width="28" height="148" fill="#165858"/>
+      <rect x="465" y="142" width="50" height="158" fill="#165858"/>
+      <rect x="528" y="155" width="35" height="145" fill="#165858"/>
+      <rect x="575" y="145" width="22" height="155" fill="#165858"/>
+      <rect x="610" y="135" width="42" height="165" fill="#165858"/>
+      <rect x="665" y="150" width="30" height="150" fill="#165858"/>
+      <rect x="708" y="140" width="38" height="160" fill="#165858"/>
+      <rect x="758" y="155" width="42" height="145" fill="#165858"/>
+      <!-- Window lights - scattered dots -->
+      <rect x="22" y="170" width="3" height="3" fill="#4DC8A0" opacity="0.6"/>
+      <rect x="28" y="178" width="3" height="3" fill="#4DC8A0" opacity="0.5"/>
+      <rect x="57" y="155" width="3" height="3" fill="#4DC8A0" opacity="0.7"/>
+      <rect x="133" y="108" width="3" height="3" fill="#4DC8A0" opacity="0.6"/>
+      <rect x="140" y="118" width="3" height="3" fill="#4DC8A0" opacity="0.4"/>
+      <rect x="207" y="120" width="3" height="3" fill="#4DC8A0" opacity="0.7"/>
+      <rect x="215" y="130" width="3" height="3" fill="#4DC8A0" opacity="0.5"/>
+      <rect x="308" y="125" width="3" height="3" fill="#4DC8A0" opacity="0.6"/>
+      <rect x="400" y="115" width="3" height="3" fill="#4DC8A0" opacity="0.7"/>
+      <rect x="410" y="125" width="3" height="3" fill="#4DC8A0" opacity="0.5"/>
+      <rect x="507" y="128" width="3" height="3" fill="#4DC8A0" opacity="0.6"/>
+      <rect x="595" y="118" width="3" height="3" fill="#4DC8A0" opacity="0.7"/>
+      <rect x="605" y="130" width="3" height="3" fill="#4DC8A0" opacity="0.4"/>
+      <rect x="652" y="135" width="3" height="3" fill="#4DC8A0" opacity="0.6"/>
+      <rect x="737" y="122" width="3" height="3" fill="#4DC8A0" opacity="0.7"/>
+      <!-- Gradient overlay top -->
+      <defs>
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0d3535" stop-opacity="1"/>
+          <stop offset="60%" stop-color="#1B6B6B" stop-opacity="0.4"/>
+          <stop offset="100%" stop-color="#1B6B6B" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="800" height="300" fill="url(#skyGrad)"/>
+    </svg>
+  </div>
+
+  <div class="lobby-content">
+    <!-- Header title block -->
+    <div class="lobby-title-block">
+      <div class="lobby-rule-top"></div>
+      <div class="lobby-title">UTAH ACQUIRE</div>
+      <div class="lobby-tagline">HIGH ADVENTURE IN THE WORLD OF HIGH FINANCE</div>
+      <div class="lobby-rule-bottom"></div>
+      <div class="lobby-copyright">A STONEFIRE PRODUCTION · UTAH EDITION</div>
+    </div>
+
+    <!-- Main card -->
+    <div class="lobby-card" id="lobby-card">
+
+      <!-- MODE SELECT -->
+      <div id="lobby-mode-select">
+        <div class="lobby-card-title">BEGIN YOUR CAMPAIGN</div>
+        <button class="lobby-btn lobby-btn-primary" onclick="showCreateRoom()">
+          <span class="lbtn-icon">🏨</span>
+          <div class="lbtn-text">
+            <div class="lbtn-main">CREATE A ROOM</div>
+            <div class="lbtn-sub">You are the host · Set the rules</div>
+          </div>
+        </button>
+        <button class="lobby-btn lobby-btn-secondary" onclick="showJoinRoom()">
+          <span class="lbtn-icon">🎫</span>
+          <div class="lbtn-text">
+            <div class="lbtn-main">JOIN A ROOM</div>
+            <div class="lbtn-sub">Enter a room code · Play as guest</div>
+          </div>
+        </button>
+        <div class="lobby-divider">or play solo</div>
+        <button class="lobby-btn lobby-btn-ghost" onclick="showSoloSetup()">
+          <span class="lbtn-icon">🤖</span>
+          <div class="lbtn-text">
+            <div class="lbtn-main">PLAY VS AI</div>
+            <div class="lbtn-sub">Single device · Up to 5 AI opponents</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- REJOIN BANNER (hidden by default, shown if saved session found) -->
+      <div id="lobby-rejoin" style="display:none;margin-top:12px">
+        <button class="lobby-btn" onclick="doRejoin()" style="background:var(--gold);border:2px solid var(--bd)">
+          <span class="lbtn-icon">🔄</span>
+          <div class="lbtn-text">
+            <div class="lbtn-main" style="color:var(--bd)">REJOIN GAME</div>
+            <div class="lbtn-sub" id="rejoin-info" style="color:var(--bm)">Reconnecting…</div>
+          </div>
+        </button>
+        <button onclick="clearSession();document.getElementById('lobby-rejoin').style.display='none'" style="background:none;border:none;color:var(--bm);font-family:'Special Elite',cursive;font-size:10px;cursor:pointer;margin-top:4px;letter-spacing:1px;text-align:center;width:100%">DISMISS</button>
+      </div>
+
+      <!-- CREATE ROOM FORM -->
+      <div id="lobby-create" style="display:none">
+        <div class="lobby-back" onclick="showModeSelect()">← Back</div>
+        <div class="lobby-card-title">CREATE ROOM</div>
+        <div class="lform-group">
+          <label class="lform-label">Your Name</label>
+          <input type="text" id="create-name" class="lform-input" placeholder="Enter your name" maxlength="20">
+        </div>
+        <div class="lform-group">
+          <label class="lform-label">Game Mode</label>
+          <div class="lbtn-row" id="mp-mode">
+            <div class="lopt sel" data-v="tycoon">Tycoon<br><span style="font-size:9px">Top 3 paid</span></div>
+            <div class="lopt" data-v="classic">Classic<br><span style="font-size:9px">Top 2 paid</span></div>
+          </div>
+        </div>
+        <div class="lform-group">
+          <label class="lform-label">Game Type</label>
+          <div class="lbtn-row" id="mp-type">
+            <div class="lopt sel" data-v="live">⚡ Live<br><span style="font-size:9px">Play together now</span></div>
+            <div class="lopt" data-v="async">📬 Async<br><span style="font-size:9px">Play over days</span></div>
+          </div>
+        </div>
+        <div class="lform-group" id="timer-group-mp">
+          <label class="lform-label">Turn Timer (Live only)</label>
+          <div class="lbtn-row" id="mp-timer">
+            <div class="lopt sel" data-v="0">Off</div>
+            <div class="lopt" data-v="30">30s</div>
+            <div class="lopt" data-v="60">60s</div>
+            <div class="lopt" data-v="90">90s</div>
+          </div>
+        </div>
+        <div class="lform-group">
+          <label class="lform-label">Background Music</label>
+          <div class="lbtn-row" id="mp-music">
+            <div class="lopt sel" data-v="yes">🎵 Yes</div>
+            <div class="lopt" data-v="no">🔕 No</div>
+          </div>
+        </div>
+        <button class="lobby-btn lobby-btn-primary" onclick="createRoom()" style="margin-top:8px">
+          <span class="lbtn-icon">🎲</span>
+          <div class="lbtn-text"><div class="lbtn-main">CREATE ROOM</div><div class="lbtn-sub">A room code will be generated</div></div>
+        </button>
+      </div>
+
+      <!-- JOIN ROOM FORM -->
+      <div id="lobby-join" style="display:none">
+        <div class="lobby-back" onclick="showModeSelect()">← Back</div>
+        <div class="lobby-card-title">JOIN A ROOM</div>
+        <div class="lform-group">
+          <label class="lform-label">Your Name</label>
+          <input type="text" id="join-name" class="lform-input" placeholder="Enter your name" maxlength="20">
+        </div>
+        <div class="lform-group">
+          <label class="lform-label">Room Code</label>
+          <input type="text" id="join-code" class="lform-input lform-code" placeholder="e.g. MOAB" maxlength="6" style="text-transform:uppercase;font-size:22px;letter-spacing:6px;text-align:center">
+        </div>
+        <button class="lobby-btn lobby-btn-primary" onclick="joinRoom()" style="margin-top:8px">
+          <span class="lbtn-icon">🎫</span>
+          <div class="lbtn-text"><div class="lbtn-main">JOIN GAME</div><div class="lbtn-sub">Enter the room</div></div>
+        </button>
+        <div class="lobby-error" id="join-error"></div>
+      </div>
+
+      <!-- WAITING ROOM -->
+      <div id="lobby-waiting" style="display:none">
+        <div class="lobby-card-title">WAITING FOR PLAYERS</div>
+        <div class="lobby-room-code-block">
+          <div class="lobby-room-label">ROOM CODE</div>
+          <div class="lobby-room-code" id="display-room-code">—</div>
+          <div class="lobby-room-hint">Share this code with your sisters</div>
+          <button class="lobby-copy-btn" onclick="copyRoomCode()">📋 Copy Code</button>
+        </div>
+        <div class="lobby-players-list" id="lobby-players-list"></div>
+        <div class="lobby-waiting-note" id="lobby-waiting-note">Waiting for players to join…</div>
+        <button class="lobby-btn lobby-btn-primary" id="btn-start-game" onclick="hostStartGame()" style="display:none;margin-top:8px">
+          <span class="lbtn-icon">🎲</span>
+          <div class="lbtn-text"><div class="lbtn-main">START GAME</div><div class="lbtn-sub">All players are ready</div></div>
+        </button>
+      </div>
+
+      <!-- JOINING WAITING ROOM (non-host) -->
+      <div id="lobby-joined" style="display:none">
+        <div class="lobby-card-title" id="joined-room-title">ROOM —</div>
+        <div class="lobby-players-list" id="lobby-joined-players"></div>
+        <div class="lobby-waiting-note">Waiting for host to start…</div>
+        <div class="lobby-spinner">⏳</div>
+      </div>
+
+    </div><!-- end lobby-card -->
+  </div><!-- end lobby-content -->
+</div>
+
+<div id="ss" class="screen">
+<div class="sc">
+  <div class="lt">
+    <div class="lt-t">Utah</div>
+    <div class="lt-t" style="color:var(--bm)">Acquire</div>
+    <div class="ld"></div>
+    <div class="lt-s">A Stonefire Production</div>
+  </div>
+
+  <!-- Chain preview -->
+  <div class="fl">
+    <label class="flb">The Seven Chains</label>
+    <div class="chain-preview" id="chain-preview"></div>
+  </div>
+
+  <div class="fl"><label class="flb">Your Name</label><input type="text" id="pname" class="fi" value="Gary" maxlength="20"></div>
+  <div class="fl"><label class="flb">AI Opponents</label>
+    <div class="bg" id="aic">
+      <div class="bo sel" data-v="1">1</div><div class="bo" data-v="2">2</div>
+      <div class="bo" data-v="3">3</div><div class="bo" data-v="4">4</div><div class="bo" data-v="5">5</div>
+    </div>
+  </div>
+  <div class="fl"><label class="flb">Mode</label>
+    <div class="bg" id="gmc">
+      <div class="bo" data-v="classic">Classic<br><span style="font-size:9px">Top 2 paid</span></div>
+      <div class="bo sel" data-v="tycoon">Tycoon<br><span style="font-size:9px">Top 3 paid</span></div>
+    </div>
+  </div>
+  <div class="fl"><label class="flb">Turn Timer</label>
+    <div class="bg" id="tmc">
+      <div class="bo sel" data-v="0">Off</div><div class="bo" data-v="30">30s</div>
+      <div class="bo" data-v="60">60s</div><div class="bo" data-v="90">90s</div>
+    </div>
+  </div>
+  <div class="fl"><label class="flb">Visibility</label>
+    <div class="bg" id="vc">
+      <div class="bo sel" data-v="public">Public</div><div class="bo" data-v="private">Private</div>
+    </div>
+  </div>
+  <div class="fl"><label class="flb">Background Music</label>
+    <div class="bg" id="msc">
+      <div class="bo sel" data-v="yes">🎵 Yes please</div>
+      <div class="bo" data-v="no">🔕 No thanks</div>
+    </div>
+  </div>
+  <button class="bp" onclick="startGame()">🎲 DEAL THE TILES</button>
+</div>
+</div>
+
+<!-- GAME -->
+<div id="sg" class="screen">
+  <div class="gh">
+    <div class="gt">Utah Acquire</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="sound-btn" onclick="openRulebook()" title="Rules">📖</button>
+      <button class="sound-btn" id="music-toggle" onclick="toggleMusic()" title="Background Music">🎵</button>
+      <button class="sound-btn" id="sound-toggle" onclick="toggleSound()" title="Sound Effects">🔊</button>
+      <div class="ti"><div style="font-family:'Special Elite',cursive;font-size:9px;text-align:right;color:var(--bl);letter-spacing:1px" id="tlbl">TURN</div><div id="tname" class="tn">—</div></div>
+    </div>
+  </div>
+  <div class="tbc"><div class="tb" id="tbar" style="width:100%"></div></div>
+
+  <!-- Legend bar - always visible, tap to expand -->
+  <div class="legend-bar" id="lbar" onclick="toggleLegend()">
+    <div id="lb-chips"></div>
+    <span class="lb-expand" id="lb-expand">▼ chains</span>
+  </div>
+
+  <!-- Expandable full legend -->
+  <div class="cl" id="cleg">
+    <div class="cl-row" id="cleg-inner"></div>
+  </div>
+
+  <div class="bc"><div class="board" id="board"></div></div>
+
+  <div class="bp2">
+    <div class="pts">
+      <div class="pt a" onclick="stab('hand')" id="tab-hand">Hand</div>
+      <div class="pt" onclick="stab('stocks')" id="tab-stocks">Market</div>
+      <div class="pt" onclick="stab('scores')" id="tab-scores">Scores</div>
+      <div class="pt" onclick="stab('log')" id="tab-log">Log</div>
+      <div class="pt" onclick="stab('prices')" id="tab-prices">Prices</div>
+    </div>
+    <div class="pc a" id="panel-hand">
+      <div class="hg" id="hdsp"></div>
+      <div class="ait" id="ait" style="display:none">AI is thinking…</div>
+      <div class="ar" id="ar">
+        <button class="ba bpl" id="bpl" onclick="doPlace()" disabled>Place Tile</button>
+        <button class="ba bbu" id="bbu" onclick="openBuy()" disabled>Buy Stock</button>
+        <button class="ba bet" id="bet" onclick="doEndTurn()" disabled>End Turn</button>
+      </div>
+    </div>
+    <div class="pc" id="panel-stocks"><div class="sg2" id="sdsp"></div></div>
+    <div class="pc" id="panel-scores"><div class="scg" id="scdsp"></div></div>
+    <div class="pc" id="panel-log"><div class="gl" id="glog"></div></div>
+    <div class="pc" id="panel-prices">
+      <div id="price-ref-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- END -->
+<div id="se" class="screen">
+<div class="ec">
+  <div class="et">🏆 Game Over</div><div class="esub">Final Standings</div>
+  <div class="er" id="eres"></div>
+  <button class="bp" onclick="backSetup()">Play Again</button>
+</div>
+</div>
+
+
+<!-- MERGER ANNOUNCEMENT MODAL -->
+<div class="mo" id="modal-merger-announce">
+<div class="md" style="border-color:var(--gold);border-width:3px">
+  <div style="text-align:center;margin-bottom:4px">
+    <div style="font-size:28px">💥</div>
+    <div class="mt" style="color:var(--brown-dark)">MERGER!</div>
+  </div>
+  <div class="ms" style="color:var(--gold);font-size:11px;letter-spacing:2px">Stockholder Bonuses Paid</div>
+  <div id="merger-announce-body" style="margin-bottom:14px"></div>
+  <button class="bp" style="font-size:13px;padding:10px;background:var(--gold);color:var(--bd);border-color:var(--gold)" 
+    id="merger-dismiss-btn" onclick="dismissMergerAnnouncement()">Got it</button>
+</div></div>
+
+<!-- MODALS -->
+<div class="mo" id="mfc"><div class="md">
+  <div class="mt">🏨 Found a Chain</div><div class="ms">Choose your headquarters</div>
+  <div class="mb" id="mfc-b"></div><div class="mco" id="mfc-o"></div>
+</div></div>
+
+<div class="mo" id="mmr"><div class="md">
+  <div class="mt">💥 Merger!</div><div class="ms">Choose the survivor</div>
+  <div class="mb" id="mmr-b"></div><div class="mco" id="mmr-o"></div>
+</div></div>
+
+<div class="mo" id="msd"><div class="md">
+  <div class="mt" id="msd-t">Stock Disposal</div><div class="ms" id="msd-s"></div>
+  <div class="mb" id="msd-b"></div><div class="mso" id="msd-o"></div>
+</div></div>
+
+<div class="mo" id="mby"><div class="md">
+  <div class="mt">📈 Buy Stocks</div><div class="ms" id="mby-s">Budget</div>
+  <div id="mby-o"></div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button class="ba bbu" style="flex:1" onclick="confirmBuy()">Confirm</button>
+    <button class="ba bet" style="flex:1" onclick="closeMo('mby')">Cancel</button>
+  </div>
+</div></div>
+
+<div class="mo" id="meg"><div class="md">
+  <div class="mt">🎯 End the Game?</div><div class="ms">Win condition met</div>
+  <div class="mb" id="meg-b"></div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button class="ba bet" style="flex:1" onclick="endGame()">End Game</button>
+    <button class="ba bbu" style="flex:1" onclick="closeMo('meg')">Keep Playing</button>
+  </div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════ CHAINS ═══════════════
+const CH={
+  kanab:  {name:'Kanab Towers',            short:'Kanab',      tier:0,color:'#F5A623',cls:'ck',icon:'🗼'},
+  moab:   {name:'Moab Luxor',              short:'Moab Luxor', tier:0,color:'#E8231A',cls:'cm',icon:'🗿'},
+  silicon:{name:'Silicon Slopes Festival', short:'Sil.Slopes', tier:1,color:'#0066FF',cls:'cs',icon:'🏨'},
+  layton: {name:'Layton Worldwide',        short:'Layton',     tier:1,color:'#00A651',cls:'cl2',icon:'🏩'},
+  stg:    {name:'American Saint George',   short:'St.George',  tier:1,color:'#FF6B00',cls:'cg',icon:'🏟️'},
+  park:   {name:'Imperial Park City',      short:'Park City',  tier:2,color:'#8B00FF',cls:'cp',icon:'🏰'},
+  slc:    {name:'Salt Lake Continental',   short:'Salt Lake',  tier:2,color:'#00B4D8',cls:'cc2',icon:'🕌'},
+};
+const CK=Object.keys(CH);
+const ROWS=['A','B','C','D','E','F','G','H','I'];
+const TIERS=['Low','Mid','High'];
+
+// ═══════════════ SOUND ENGINE ═══════════════
+let audioCtx=null;let soundOn=true;
+function getAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx}
+function toggleSound(){soundOn=!soundOn;document.getElementById('sound-toggle').textContent=soundOn?'🔊':'🔇'}
+
+function playSound(type){
+  if(!soundOn)return;
+  try{
+    const ac=getAudio();
+    const now=ac.currentTime;
+    if(type==='place'){
+      // Satisfying wooden thud
+      const buf=ac.createBuffer(1,ac.sampleRate*0.15,ac.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(ac.sampleRate*0.04));
+      const src=ac.createBufferSource();src.buffer=buf;
+      const g=ac.createGain();g.gain.setValueAtTime(0.5,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.15);
+      const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=400;
+      src.connect(f);f.connect(g);g.connect(ac.destination);src.start(now);
+    }else if(type==='found'){
+      // Fanfare - ascending notes
+      [523,659,784,1047].forEach((freq,i)=>{
+        const o=ac.createOscillator();const g=ac.createGain();
+        o.type='triangle';o.frequency.value=freq;
+        g.gain.setValueAtTime(0,now+i*0.1);g.gain.linearRampToValueAtTime(0.3,now+i*0.1+0.05);
+        g.gain.exponentialRampToValueAtTime(0.001,now+i*0.1+0.25);
+        o.connect(g);g.connect(ac.destination);o.start(now+i*0.1);o.stop(now+i*0.1+0.25);
+      });
+    }else if(type==='merge'){
+      // Dramatic low boom
+      const buf=ac.createBuffer(1,ac.sampleRate*0.6,ac.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++){
+        const t=i/ac.sampleRate;
+        d[i]=(Math.random()*2-1)*Math.exp(-t*6)*0.8+Math.sin(2*Math.PI*60*t)*Math.exp(-t*4)*0.4;
+      }
+      const src=ac.createBufferSource();src.buffer=buf;
+      const g=ac.createGain();g.gain.value=0.7;
+      const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=200;
+      src.connect(f);f.connect(g);g.connect(ac.destination);src.start(now);
+    }else if(type==='buy'){
+      // Cash register ding
+      [880,1109].forEach((freq,i)=>{
+        const o=ac.createOscillator();const g=ac.createGain();
+        o.type='sine';o.frequency.value=freq;
+        g.gain.setValueAtTime(0.25,now+i*0.08);g.gain.exponentialRampToValueAtTime(0.001,now+i*0.08+0.2);
+        o.connect(g);g.connect(ac.destination);o.start(now+i*0.08);o.stop(now+i*0.08+0.2);
+      });
+    }else if(type==='tick'){
+      // Timer tick
+      const o=ac.createOscillator();const g=ac.createGain();
+      o.type='square';o.frequency.value=800;
+      g.gain.setValueAtTime(0.08,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.05);
+      o.connect(g);g.connect(ac.destination);o.start(now);o.stop(now+0.05);
+    }else if(type==='win'){
+      // Victory fanfare
+      const notes=[523,659,784,659,784,1047];
+      const times=[0,.12,.24,.36,.48,.6];
+      notes.forEach((freq,i)=>{
+        const o=ac.createOscillator();const g=ac.createGain();
+        o.type='triangle';o.frequency.value=freq;
+        g.gain.setValueAtTime(0.4,now+times[i]);g.gain.exponentialRampToValueAtTime(0.001,now+times[i]+0.3);
+        o.connect(g);g.connect(ac.destination);o.start(now+times[i]);o.stop(now+times[i]+0.3);
+      });
+    }else if(type==='lose'){
+      // Descending trombone
+      const o=ac.createOscillator();const g=ac.createGain();
+      o.type='sawtooth';o.frequency.setValueAtTime(400,now);
+      o.frequency.linearRampToValueAtTime(150,now+0.8);
+      g.gain.setValueAtTime(0.3,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.8);
+      o.connect(g);g.connect(ac.destination);o.start(now);o.stop(now+0.8);
+    }
+  }catch(e){}
+}
+
+// ═══════════════ SETUP UI ═══════════════
+// Populate chain preview on setup screen
+(function(){
+  const el=document.getElementById('chain-preview');
+  CK.forEach(k=>{
+    const d=document.createElement('div');d.className='cp-item';
+    d.style.borderLeft=`3px solid ${CH[k].color}`;
+    d.innerHTML=`<span class="cp-icon">${CH[k].icon}</span>
+      <div><div class="cp-name">${CH[k].name}</div>
+      <div class="cp-tier">${TIERS[CH[k].tier]} tier</div></div>`;
+    el.appendChild(d);
+  });
+})();
+
+['aic','gmc','tmc','vc','msc'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{
+    const b=e.target.closest('.bo');if(!b)return;
+    document.querySelectorAll(`#${id} .bo`).forEach(x=>x.classList.remove('sel'));
+    b.classList.add('sel');
+  });
+});
+function gsel(id){const s=document.querySelector(`#${id} .bo.sel`);return s?s.dataset.v:null}
+
+function stockPrice(k,sz){
+  if(sz<2)return 0;
+  const b=[200,300,400][CH[k].tier];
+  const add=sz===2?0:sz===3?100:sz===4?200:sz===5?300:sz===6?400:sz<=10?500:sz<=20?600:sz<=30?700:sz<=40?800:900;
+  return b+add;
+}
+function bonuses(k,sz){
+  const p=stockPrice(k,sz);
+  return{primary:p*10,secondary:p*5,tertiary:Math.round(p*3.5/100)*100};
+}
+
+// ═══════════════ STATE ═══════════════
+let G={};
+function cur(){return G.players[G.ci]}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function adj(tid){
+  const c=parseInt(tid),r=tid.slice(String(c).length),ri=ROWS.indexOf(r),a=[];
+  if(c>1)a.push((c-1)+r);if(c<12)a.push((c+1)+r);
+  if(ri>0)a.push(c+ROWS[ri-1]);if(ri<8)a.push(c+ROWS[ri+1]);
+  return a;
+}
+function chainOf(tid){return G.board[tid]?G.board[tid].chain:null}
+function csz(k){return G.chains[k].length}
+function safe(k){return csz(k)>=11}
+
+function analyze(tid){
+  const ap=adj(tid).filter(t=>G.board[t]&&G.board[t].placed);
+  const acs=[...new Set(ap.map(t=>chainOf(t)).filter(Boolean))];
+  if(!ap.length)return{type:'ind'};
+  if(!acs.length)return{type:'found',tiles:ap};
+  if(acs.length===1)return{type:'grow',chain:acs[0],extra:ap.filter(t=>!chainOf(t))};
+  if(acs.filter(c=>safe(c)).length>=2)return{type:'dead'};
+  return{type:'merge',chains:acs};
+}
+function unplayable(tid){return analyze(tid).type==='dead'}
+
+function initG(pname,aiN,mode,timer,vis){
+  const all=[];
+  for(let c=1;c<=12;c++)for(let r of ROWS)all.push(c+r);
+  shuffle(all);const bag=[...all];
+  const names=[pname,'Ada','Bea','Cal','Dot','Eli'];
+  const colors=['#c9a227','#6a8fd8','#e87070','#70c870','#d4a0d4','#f0c060'];
+  const players=[];
+  for(let i=0;i<=aiN;i++)
+    players.push({id:i,name:i===0?pname:names[i],isAI:i!==0,color:colors[i],
+      money:6000,hand:[],stocks:Object.fromEntries(CK.map(k=>[k,0]))});
+  for(const p of players)for(let i=0;i<6;i++)p.hand.push(bag.pop());
+  const st={};for(const p of players)st[p.id]=bag.pop();
+  players.sort((a,b)=>{
+    const ta=st[a.id],tb=st[b.id],ca=parseInt(ta),cb=parseInt(tb);
+    const ra=ta.slice(String(ca).length),rb=tb.slice(String(cb).length);
+    return ca!==cb?ca-cb:ra.localeCompare(rb);
+  });
+  const board={};
+  for(const p of players)board[st[p.id]]={placed:true,chain:null,hq:false};
+  G={players,bag,board,
+    chains:Object.fromEntries(CK.map(k=>[k,[]])),
+    active:new Set(),market:Object.fromEntries(CK.map(k=>[k,25])),
+    ci:0,phase:'place',sel:null,mode,timer,timerLeft:timer,timerInt:null,
+    vis,log:[],pendMerger:null,dispQ:[],toBuy:Object.fromEntries(CK.map(k=>[k,0])),
+    legendOpen:false};
+}
+
+function startGame(){
+  const nm=document.getElementById('pname').value.trim()||'Gary';
+  const musicPref=gsel('msc')||'yes';
+  initG(nm,parseInt(gsel('aic'))||1,gsel('gmc')||'tycoon',parseInt(gsel('tmc'))||0,gsel('vc')||'public');
+  showScr('sg');renderAll();
+  if(musicPref==='yes'){musicOn=true;document.getElementById('music-toggle').textContent='🎵';startMusic()}else{musicOn=false;document.getElementById('music-toggle').textContent='🔕'}
+  log2(`Game started — ${G.players.length} players · ${G.mode} mode`,'imp');
+  log2(`${cur().name} goes first`,'imp');
+  startTurn();
+}
+
+// ═══════════════ LEGEND TOGGLE ═══════════════
+function toggleLegend(){
+  G.legendOpen=!G.legendOpen;
+  document.getElementById('cleg').classList.toggle('open',G.legendOpen);
+  document.getElementById('lb-expand').textContent=G.legendOpen?'▲ close':'▼ chains';
+}
+
+// ═══════════════ TURN ═══════════════
+function startTurn(){
+  // Guard: don't double-start a turn
+  if(G._turnStarted === G.ci + '_' + (G.turnNum||0)) return;
+  G._turnStarted = G.ci + '_' + (G.turnNum||0);
+  G.turnNum = (G.turnNum||0) + 1;
+  G.phase='place';G.sel=null;G.toBuy=Object.fromEntries(CK.map(k=>[k,0]));
+  const p=cur();
+  startTurnSummary(p.name);
+  const dis=p.hand.filter(t=>unplayable(t));
+  for(const t of dis){log2(`${p.name} discards unplayable ${t}`);p.hand=p.hand.filter(x=>x!==t);drawTile(p)}
+  renderAll();updTurn();checkEnd();
+  if(cur().isAI){document.getElementById('ait').style.display='block';setTimeout(aiTurn,700)}
+  else{updBtns();startTimer()}
+}
+function startTimer(){
+  if(!G.timer)return;
+  clearInterval(G.timerInt);G.timerLeft=G.timer;updTimerBar();
+  G.timerInt=setInterval(()=>{
+    G.timerLeft--;updTimerBar();
+    if(G.timerLeft<=5&&G.timerLeft>0)playSound('tick');
+    if(G.timerLeft<=0){clearInterval(G.timerInt);log2(`${cur().name}'s time expired`,'imp');drawTile(cur());advance()}
+  },1000);
+}
+function stopTimer(){clearInterval(G.timerInt);G.timerLeft=G.timer;updTimerBar()}
+function updTimerBar(){
+  const b=document.getElementById('tbar');
+  if(!G.timer){b.style.width='100%';return}
+  const p=(G.timerLeft/G.timer)*100;b.style.width=p+'%';b.classList.toggle('warn',p<25);
+}
+function advance(){
+  stopTimer();
+  G.ci=(G.ci+1)%G.players.length;
+  G.sel=null;
+  if(G.isMP){
+    writeMoveToFirebase(G).then(()=>{
+          renderAll();
+      if(cur().id===MP.playerId){renderAll();startTurn();}
+      else{renderAll();updTurn();updBtns();}
+    });
+  }else{renderAll();startTurn();}
+}
+function updTurn(){
+  const p=cur();
+  document.getElementById('tlbl').textContent=p.isAI?'AI TURN':'YOUR TURN';
+  document.getElementById('tname').textContent=p.name;
+}
+function updBtns(){
+  const p=cur(),h=G.isMP?(p.id===MP.playerId):!p.isAI;
+  document.getElementById('bpl').disabled=!(h&&G.phase==='place'&&G.sel!==null);
+  document.getElementById('bbu').disabled=!(h&&G.phase==='buy'&&G.active.size>0);
+  document.getElementById('bet').disabled=!(h&&G.phase==='buy');
+  document.getElementById('ait').style.display=p.isAI?'block':'none';
+  document.getElementById('ar').style.display=p.isAI?'none':'flex';
+}
+
+// ═══════════════ PLACE ═══════════════
+function selTile(tid){
+  if(G.phase!=='place')return;
+  if(G.isMP && cur().id!==MP.playerId)return;
+  if(!G.isMP && cur().isAI)return;
+  if(unplayable(tid)){toast('Tile is unplayable');return}
+  G.sel=G.sel===tid?null:tid;renderHand();updBtns();
+}
+function doPlace(){
+  if(!G.sel)return;
+  if(G.isMP && cur().id!==MP.playerId){toast('Not your turn');return;}
+  execPlace(G.sel,cur());
+}
+function execPlace(tid,player){
+  const a=analyze(tid);
+  player.hand=player.hand.filter(t=>t!==tid);
+  G.sel=null; // Clear selection immediately so hand updates visually right away
+  if(!player.isAI) renderHand(); // Immediate visual feedback - remove tile from hand display
+  G.board[tid]={placed:true,chain:null,hq:false};
+  log2(`${player.name} places ${tid}`);
+  playSound('place');
+  recordTilePlaced(tid, a.type, a.type==='grow'?CH[a.chain].name:a.type==='merge'?a.chains.map(c=>CH[c].name).join(' & '):null);
+  if(a.type==='ind')afterPlace(player);
+  else if(a.type==='found'){
+    if(G.active.size>=7){log2('No HQ available — independent');afterPlace(player);return}
+    if(player.isAI){const av=CK.filter(k=>!G.active.has(k));foundChain(av[Math.floor(Math.random()*av.length)],tid,a.tiles,player)}
+    else showFoundModal(tid,a.tiles,player);
+  }else if(a.type==='grow'){growChain(a.chain,tid,a.extra||[]);afterPlace(player)}
+  else if(a.type==='merge')doMerge(a.chains,tid,player);
+}
+function showFoundModal(tid,adjT,player){
+  const av=CK.filter(k=>!G.active.has(k));
+  document.getElementById('mfc-b').textContent=`You connected ${adjT.length+1} tiles. Choose a chain to found:`;
+  const o=document.getElementById('mfc-o');o.innerHTML='';
+  for(const k of av){
+    const b=document.createElement('button');b.className='mcb';
+    b.innerHTML=`<span class="mcb-icon">${CH[k].icon}</span>
+      <div><div style="font-weight:bold">${CH[k].name}</div>
+      <div style="font-size:9px;opacity:.7">${TIERS[CH[k].tier]} tier · $${stockPrice(k,2)}/share at 2 tiles</div></div>`;
+    b.style.borderLeftColor=CH[k].color;b.style.borderLeftWidth='4px';
+    b.onclick=()=>{closeMo('mfc');foundChain(k,tid,adjT,player)};
+    o.appendChild(b);
+  }
+  document.getElementById('mfc').classList.add('a');
+}
+function foundChain(k,tid,adjT,player){
+  const tiles=[tid,...adjT];
+  G.active.add(k);G.chains[k]=tiles;
+  for(const t of tiles)G.board[t].chain=k;
+  G.board[tid].hq=true;
+  if(G.market[k]>0){player.stocks[k]++;G.market[k]--;log2(`${player.name} founds ${CH[k].icon} ${CH[k].name} — founder bonus!`,'imp')}
+  else{const v=stockPrice(k,tiles.length);player.money+=v;log2(`${player.name} founds ${CH[k].icon} ${CH[k].name} — cash $${v}`,'imp')}
+  playSound('found');renderAll();afterPlace(player);
+}
+function growChain(k,tid,extra){
+  G.chains[k].push(tid);G.board[tid].chain=k;
+  for(const t of extra){if(!G.board[t])G.board[t]={placed:true,chain:k,hq:false};else G.board[t].chain=k;G.chains[k].push(t)}
+  log2(`${CH[k].icon} ${CH[k].name} grows to ${csz(k)} tiles`);
+}
+
+// ═══════════════ MERGE ═══════════════
+
+// ═══════════════════════════════════════════════════════
+// MERGER SYSTEM — Full multiplayer with per-player disposal
+// ═══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// MERGER SYSTEM v3 — Clean, simple, correct
+// ═══════════════════════════════════════════════════════
+
+function doMerge(chains,mtile,mm){
+  chains.sort((a,b)=>csz(b)-csz(a));
+  const top=csz(chains[0]),tied=chains.filter(c=>csz(c)===top);
+  if(tied.length>1&&!mm.isAI)showMergeModal(tied,chains,mtile,mm);
+  else{const sv=tied[0];execMerge(sv,chains.filter(c=>c!==sv),mtile,mm);}
+}
+
+function showMergeModal(tied,all,mtile,mm){
+  document.getElementById('mmr-b').textContent='Equal size — choose the surviving chain:';
+  const o=document.getElementById('mmr-o');o.innerHTML='';
+  for(const k of tied){
+    const b=document.createElement('button');b.className='mcb';
+    b.innerHTML=`<span class="mcb-icon">${CH[k].icon}</span>${CH[k].name} (${csz(k)} tiles)`;
+    b.style.borderLeftColor=CH[k].color;b.style.borderLeftWidth='4px';
+    b.onclick=()=>{closeMo('mmr');execMerge(k,all.filter(c=>c!==k),mtile,mm);};
+    o.appendChild(b);
+  }
+  document.getElementById('mmr').classList.add('a');
+}
+
+function execMerge(sv,acq,mtile,mm){
+  G.board[mtile].chain=sv;
+  G.chains[sv].push(mtile);
+  log2(`💥 MERGER: ${CH[sv].icon} ${CH[sv].name} acquires ${acq.map(c=>CH[c].icon+' '+CH[c].name).join(' & ')}!`,'mer');
+  playSound('merge');
+
+  // Compute and pay bonuses
+  const bonusData=[];
+  for(const k of acq){
+    const payouts=computeAndPayBonuses(k,csz(k));
+    bonusData.push({chain:k,payouts});
+  }
+
+  // Build disposal queue — mergemaker first, then clockwise
+  const mmIdx=G.players.findIndex(p=>p.id===mm.id);
+  const ordered=mmIdx>=0?[...G.players.slice(mmIdx),...G.players.slice(0,mmIdx)]:[...G.players];
+  const dispQueue=[];
+  for(const k of acq){
+    for(const p of ordered){
+      if(p.stocks[k]>0) dispQueue.push({p,k});
+    }
+  }
+
+  G.pendMerger={sv,orig:[...acq],mm,bonusData,dispQueue:[...dispQueue]};
+
+  // Stash merger data for pushMergerAnnouncement — finMerge nulls G.pendMerger
+  // before the push fires, so we need these available on G directly
+  G._lastMergerSv=sv;
+  G._lastMergerAcq=[].concat(acq);
+  G._lastMergerBonusData=[].concat(bonusData);
+
+  // Show announcement then run disposal (works same for solo and MP)
+  showMergerModal(sv,acq,bonusData,()=>nextDisposal());
+}
+
+// ── BONUS COMPUTATION ──
+function computeAndPayBonuses(k,sz){
+  const bn=bonuses(k,sz);
+  const holders=G.players.map(p=>({p,q:p.stocks[k]})).filter(h=>h.q>0).sort((a,b)=>b.q-a.q);
+  if(!holders.length)return[];
+  const isTy=G.mode==='tycoon';
+  const payouts=[];
+
+  if(holders.length===1){
+    const b=isTy?bn.primary+bn.tertiary:bn.primary+bn.secondary;
+    holders[0].p.money+=b;
+    payouts.push({id:holders[0].p.id,name:holders[0].p.name,rank:'Sole Holder',amount:b});
+    log2(`${holders[0].p.name} sole holder +$${b}`,'imp');
+    return payouts;
+  }
+
+  const tq=holders[0].q,pt=holders.filter(h=>h.q===tq);
+  if(pt.length>=2){
+    const sh=Math.ceil((bn.primary+bn.secondary)/pt.length/100)*100;
+    pt.forEach(h=>{h.p.money+=sh;payouts.push({id:h.p.id,name:h.p.name,rank:'1st (tied)',amount:sh});log2(`${h.p.name} 1st tied +$${sh}`,'imp');});
+    if(isTy&&holders.length>pt.length){
+      const nx=holders.find(h=>h.q<tq);
+      if(nx){nx.p.money+=bn.tertiary;payouts.push({id:nx.p.id,name:nx.p.name,rank:'3rd',amount:bn.tertiary});log2(`${nx.p.name} 3rd +$${bn.tertiary}`,'imp');}
+    }
+  }else{
+    holders[0].p.money+=bn.primary;
+    payouts.push({id:holders[0].p.id,name:holders[0].p.name,rank:'1st',amount:bn.primary});
+    log2(`${holders[0].p.name} 1st +$${bn.primary}`,'imp');
+    if(holders.length>=2){
+      const sq=holders[1].q,st2=holders.filter((h,i)=>i>0&&h.q===sq);
+      if(st2.length>=2){
+        const sh=Math.ceil((bn.secondary+(isTy?bn.tertiary:0))/st2.length/100)*100;
+        st2.forEach(h=>{h.p.money+=sh;payouts.push({id:h.p.id,name:h.p.name,rank:'2nd (tied)',amount:sh});log2(`${h.p.name} 2nd tied +$${sh}`,'imp');});
+      }else{
+        holders[1].p.money+=bn.secondary;
+        payouts.push({id:holders[1].p.id,name:holders[1].p.name,rank:'2nd',amount:bn.secondary});
+        log2(`${holders[1].p.name} 2nd +$${bn.secondary}`,'imp');
+        if(isTy&&holders.length>=3){
+          const tt=holders.filter((h,i)=>i>1&&h.q===holders[2].q);
+          const ts=Math.ceil(bn.tertiary/tt.length/100)*100;
+          tt.forEach(h=>{h.p.money+=ts;payouts.push({id:h.p.id,name:h.p.name,rank:'3rd',amount:ts});log2(`${h.p.name} 3rd +$${ts}`,'imp');});
+        }
+      }
+    }
+  }
+  return payouts;
+}
+
+// ── MERGER ANNOUNCEMENT MODAL ──
+function showMergerModal(sv,acq,bonusData,onDone){
+  const el=document.getElementById('merger-announce-body');
+  let h='';
+  for(const k of acq){
+    h+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(201,162,39,0.12);border-radius:3px;margin-bottom:8px;border-left:4px solid ${CH[sv].color}">
+      <span style="font-size:20px">${CH[k].icon}</span>
+      <div><div style="font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--bd)">${CH[k].name}</div>
+      <div style="font-family:'Special Elite',cursive;font-size:9px;color:var(--bm);letter-spacing:1px">acquired by ${CH[sv].icon} ${CH[sv].name.toUpperCase()}</div>
+      </div></div>`;
+  }
+  for(const bd of bonusData){
+    if(!bd.payouts||!bd.payouts.length)continue;
+    h+=`<div style="font-family:'Special Elite',cursive;font-size:9px;letter-spacing:2px;color:var(--bl);text-transform:uppercase;margin:10px 0 5px">${CH[bd.chain].name} Bonuses</div>`;
+    for(const payout of bd.payouts){
+      const isMe=payout.id===MP.playerId||(!G.isMP&&G.players[0].id===payout.id);
+      h+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:${isMe?'rgba(201,162,39,0.18)':'rgba(0,0,0,0.06)'};border-radius:3px;margin-bottom:3px;${isMe?'border:1px solid var(--gold)':''}">
+        <span style="font-family:'Special Elite',cursive;font-size:10px;color:var(--gold);min-width:75px">${payout.rank}</span>
+        <span style="font-family:'Libre Baskerville',serif;font-size:12px;color:var(--bd);flex:1">${payout.name}${isMe?' ✦':''}</span>
+        <span style="font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:var(--bd)">+$${payout.amount.toLocaleString()}</span>
+      </div>`;
+    }
+  }
+  const hasDisp=G.pendMerger&&G.pendMerger.dispQueue&&G.pendMerger.dispQueue.length>0;
+  if(hasDisp) h+=`<div style="font-family:'Special Elite',cursive;font-size:9px;color:var(--bl);text-align:center;letter-spacing:1px;margin-top:10px;padding-top:8px;border-top:1px solid var(--parchment)">Stockholders will now choose what to do with their shares.</div>`;
+  el.innerHTML=h;
+  G._mergerOnDone=onDone;
+  document.getElementById('modal-merger-announce').classList.add('a');
+}
+
+function dismissMergerAnnouncement(){
+  closeMo('modal-merger-announce');
+  if(G._mergerOnDone){const fn=G._mergerOnDone;G._mergerOnDone=null;fn();}
+  // On remote phones, a state update may have been skipped while the modal
+  // was showing (the guard in listenGameState returns early). Re-fetch now.
+  if(G.isMP && G.roomCode) refreshMPState();
+}
+
+// ── DISPOSAL QUEUE ──
+function nextDisposal(){
+  if(!G.pendMerger||!G.pendMerger.dispQueue||!G.pendMerger.dispQueue.length){
+    finMerge();return;
+  }
+  const{p,k}=G.pendMerger.dispQueue[0];
+  if(!p||p.stocks[k]===0){G.pendMerger.dispQueue.shift();nextDisposal();return;}
+  if(p.isAI){
+    aiDispose(p,k);
+    G.pendMerger.dispQueue.shift();
+    renderAll();
+    setTimeout(nextDisposal,300);
+    return;
+  }
+  showStockDisposalModal(p,k,()=>{G.pendMerger.dispQueue.shift();nextDisposal();});
+}
+
+function aiDispose(p,k){
+  const qty=p.stocks[k],sv=G.pendMerger.sv;
+  if(CH[sv].tier>=CH[k].tier&&qty>=2&&G.market[sv]>0){
+    const pairs=Math.min(Math.floor(qty/2),G.market[sv]);
+    p.stocks[k]-=pairs*2;G.market[k]+=pairs*2;
+    p.stocks[sv]+=pairs;G.market[sv]-=pairs;
+    if(p.stocks[k]>0){const pr=stockPrice(k,csz(k));p.money+=p.stocks[k]*pr;G.market[k]+=p.stocks[k];p.stocks[k]=0;}
+  }else{
+    const pr=stockPrice(k,csz(k));p.money+=qty*pr;G.market[k]+=qty;p.stocks[k]=0;
+  }
+}
+
+function showStockDisposalModal(p,k,onDone){
+  const sv=G.pendMerger.sv;
+  const sz=csz(k),pr=stockPrice(k,sz),qty=p.stocks[k];
+  const pairs=Math.min(Math.floor(qty/2),G.market[sv]);
+  document.getElementById('msd-t').textContent=`${CH[k].icon} ${CH[k].name} Acquired`;
+  document.getElementById('msd-s').textContent=`${p.name} — ${qty} share${qty>1?'s':''}`;
+  document.getElementById('msd-b').innerHTML=`Sell @ <strong>$${pr}/share</strong>`;
+  const o=document.getElementById('msd-o');o.innerHTML='';
+  const mk=(txt,fn)=>{const b=document.createElement('button');b.className='msb';b.textContent=txt;b.onclick=fn;o.appendChild(b);};
+  mk(`Keep all ${qty} (hope chain re-forms)`,()=>{closeMo('msd');onDone();});
+  mk(`💰 Sell all → +$${(qty*pr).toLocaleString()}`,()=>{
+    p.money+=qty*pr;G.market[k]+=qty;p.stocks[k]=0;
+    log2(`${p.name} sells ${qty} ${CH[k].name}`);
+    closeMo('msd');renderAll();onDone();
+  });
+  if(qty>=2&&G.market[sv]>0){
+    mk(`🔄 Trade ${pairs*2} → ${pairs} ${CH[sv].icon} ${CH[sv].name}`,()=>{
+      p.stocks[k]-=pairs*2;G.market[k]+=pairs*2;
+      p.stocks[sv]+=pairs;G.market[sv]-=pairs;
+      log2(`${p.name} trades for ${pairs} ${CH[sv].name}`);
+      closeMo('msd');renderAll();onDone();
+    });
+  }
+  document.getElementById('msd').classList.add('a');
+}
+
+// ── FINALIZE MERGER ──
+function finMerge(){
+  const{sv,orig}=G.pendMerger;
+  for(const k of orig){
+    for(const t of G.chains[k]||[]){
+      G.board[t].chain=sv;G.board[t].hq=false;
+      G.chains[sv].push(t);
+    }
+    G.chains[k]=[];G.active.delete(k);
+    log2(`${CH[k].name} dissolved`);
+  }
+  G.pendMerger=null;
+  // Move to buy phase BEFORE writing to Firebase, so the state listener
+  // doesn't overwrite phase back to 'place' and freeze the game.
+  afterPlace(G.players[G.ci]);
+  renderAll();
+  if(G.isMP){
+    pushMergerAnnouncement();
+    writeMergerStateToFirebase();
+  }
+}
+
+// Push merger announcement to other phones with full structured data
+// so remote phones can show the gold announcement modal, not just log lines
+function pushMergerAnnouncement(){
+  if(!G.isMP)return;
+  var code=G.roomCode;
+  // Reconstruct bonusData from the log since G.pendMerger is already nulled.
+  // We capture this data in execMerge and stash it for the push.
+  var payload={
+    sv:G._lastMergerSv||null,
+    acq:G._lastMergerAcq||[],
+    bonusData:G._lastMergerBonusData||[],
+    timestamp:Date.now()
+  };
+  dbRef('games/'+code+'/lastMerger').set(payload);
+}
+
+// After a merger, ALL players' money and stocks changed (bonuses + disposal).
+// Normal writeMoveToFirebase only pushes the active player's data, which leaves
+// everyone else's financials stale on remote phones. This pushes everything.
+function writeMergerStateToFirebase(){
+  if(!G.isMP) return;
+  var code=G.roomCode;
+  var updates={};
+  updates['games/'+code+'/state/board']=G.board;
+  updates['games/'+code+'/state/chains']=G.chains;
+  updates['games/'+code+'/state/active']=[].concat(Array.from(G.active));
+  updates['games/'+code+'/state/market']=G.market;
+  updates['games/'+code+'/state/tileBag']=G.bag;
+  updates['games/'+code+'/state/currentPlayerIdx']=G.ci;
+  updates['games/'+code+'/state/phase']=G.phase;
+  updates['games/'+code+'/state/lastUpdate']=Date.now();
+  // Push EVERY player's money and stocks — not just the mergemaker
+  for(var i=0;i<G.players.length;i++){
+    var p=G.players[i];
+    updates['games/'+code+'/playerStates/'+p.id+'/money']=p.money;
+    updates['games/'+code+'/playerStates/'+p.id+'/stocks']=p.stocks;
+  }
+  // Also push mergemaker's hand (tile was consumed by placement)
+  updates['games/'+code+'/hands/'+MP.playerId]=G.players.find(function(p){return p.id===MP.playerId;}).hand;
+  fbDb.ref().update(updates);
+}
+
+// ════════════════════════════════════════════════════════
+// MP MERGER — Firebase push + per-player disposal modals
+// ════════════════════════════════════════════════════════
+
+// ═══════════════ BUY ═══════════════
+function afterPlace(p){G.phase='buy';G.sel=null;renderAll();updBtns();renderHand();}
+function openBuy(){
+  const p=cur();G.toBuy=Object.fromEntries(CK.map(k=>[k,0]));
+  updBuyLabel();
+  const o=document.getElementById('mby-o');o.innerHTML='';
+  for(const k of CK){
+    if(!G.active.has(k)||!G.market[k])continue;
+    const pr=stockPrice(k,csz(k));
+    const row=document.createElement('div');row.className='bqr';
+    row.innerHTML=`<div style="display:flex;align-items:center;gap:8px;flex:1">
+      <span style="font-size:18px">${CH[k].icon}</span>
+      <div><div style="font-family:'Special Elite',cursive;font-size:10px;color:var(--bd);text-transform:uppercase;border-bottom:2px solid ${CH[k].color}">${CH[k].name}</div>
+      <div style="font-family:'Playfair Display',serif;font-size:10px;color:var(--bm)">$${pr} · ${G.market[k]} avail</div></div></div>
+      <div class="qc"><button class="qb" onclick="chgBuy('${k}',-1)">−</button>
+      <span class="qn" id="bq-${k}">0</span>
+      <button class="qb" onclick="chgBuy('${k}',1)">+</button></div>`;
+    o.appendChild(row);
+  }
+  document.getElementById('mby').classList.add('a');
+}
+function chgBuy(k,d){
+  const p=cur(),tot=Object.values(G.toBuy).reduce((a,b)=>a+b,0),pr=stockPrice(k,csz(k));
+  if(G.toBuy[k]+d<0)return;
+  if(d>0&&tot>=3){toast('Max 3 stocks per turn');return}
+  if(d>0&&G.market[k]<=G.toBuy[k]){toast('Not enough stock');return}
+  if(d>0&&p.money<(tot+1)*pr){toast('Not enough money');return}
+  G.toBuy[k]+=d;document.getElementById('bq-'+k).textContent=G.toBuy[k];updBuyLabel();
+}
+function updBuyLabel(){
+  const p=cur();let cost=0;
+  for(const k of CK)cost+=G.toBuy[k]*stockPrice(k,csz(k));
+  document.getElementById('mby-s').textContent=`$${p.money.toLocaleString()} budget · $${cost} cost · $${(p.money-cost).toLocaleString()} left`;
+}
+function confirmBuy(){
+  const p=cur();let n=0;
+  for(const k of CK){const q=G.toBuy[k];if(!q)continue;const pr=stockPrice(k,csz(k));p.stocks[k]+=q;G.market[k]-=q;p.money-=q*pr;log2(`${p.name} buys ${q}× ${CH[k].icon} ${CH[k].name} @$${pr}`);recordStockBought(k,q,pr);n+=q}
+  if(n)playSound('buy');else log2(`${p.name} passes on buying`);
+  closeMo('mby');doEndTurn();
+}
+
+// ═══════════════ END TURN ═══════════════
+function doEndTurn(){
+  stopTimer();drawTile(cur());renderAll();
+  const ec=endCond();
+  if(ec&&!cur().isAI){
+    document.getElementById('meg-b').textContent=ec;
+    document.getElementById('meg').classList.add('a');
+    return;
+  }
+  // Show turn summary before advancing — human and AI turns alike
+  G._pendingAdvance = advance;
+  if(G.isMP) pushTurnSummaryToFirebase(); // push to Firebase for other players
+  showTurnSummary(); // show locally immediately
+}
+function checkEnd(){const ec=endCond();if(ec&&cur().isAI){const s=[...G.players].sort((a,b)=>b.money-a.money);if(s[0].id===cur().id)setTimeout(endGame,400)}}
+function endCond(){
+  const ac=[...G.active];
+  if(ac.length&&ac.every(c=>safe(c)))return'All active chains are safe (11+ tiles). You may end the game.';
+  for(const c of G.active)if(csz(c)>=41)return`${CH[c].name} has reached 41 tiles!`;
+  return null;
+}
+function endGame(){
+  clearSession();
+  closeMo('meg');log2('Game over — final scores…','imp');
+  for(const k of G.active){log2(`Final: ${CH[k].icon} ${CH[k].name} (${csz(k)} tiles)`);payBonuses(k,csz(k))}
+  for(const p of G.players){
+    let v=0;for(const k of CK){if(p.stocks[k]>0&&G.active.has(k)){const pr=stockPrice(k,csz(k));v+=p.stocks[k]*pr;p.stocks[k]=0}}
+    if(v){p.money+=v;log2(`${p.name} liquidates +$${v}`)}
+  }
+  showEnd();
+}
+function showEnd(){
+  const s=[...G.players].sort((a,b)=>b.money-a.money);
+  const el=document.getElementById('eres');el.innerHTML='';
+  s.forEach((p,i)=>{
+    const r=document.createElement('div');r.className=`err${i===0?' win':''}`;
+    r.innerHTML=`<div class="erk${i===0?' g':''}">${i===0?'🏆':i+1}</div>
+      <div class="ern">${p.name}${p.isAI?' 🤖':''}</div>
+      <div class="erm">$${p.money.toLocaleString()}</div>`;
+    el.appendChild(r);
+  });
+  playSound(s[0].id===0?'win':'lose');
+  showScr('se');
+}
+
+// ═══════════════ DRAW ═══════════════
+function drawTile(p){if(!G.bag.length||p.hand.length>=6)return;p.hand.push(G.bag.pop())}
+
+// ═══════════════ AI ═══════════════
+function aiTurn(){
+  const p=cur();if(!p.isAI)return;
+  const pl=p.hand.filter(t=>!unplayable(t));
+  if(!pl.length){log2(`${p.name} no playable tiles`);drawTile(p);advance();return}
+  let ch=null;
+  for(const t of pl){const a=analyze(t);if(a.type==='grow'&&p.stocks[a.chain]>0){ch=t;break}}
+  if(!ch)for(const t of pl){const a=analyze(t);if(a.type==='merge'&&a.chains.some(c=>p.stocks[c]>0)){ch=t;break}}
+  if(!ch)for(const t of pl){const a=analyze(t);if(a.type==='found'&&G.active.size<7){ch=t;break}}
+  if(!ch)for(const t of pl){const a=analyze(t);if(a.type==='grow'){ch=t;break}}
+  if(!ch)ch=pl[Math.floor(Math.random()*pl.length)];
+  execPlace(ch,p);
+  setTimeout(()=>{
+    let b=3;
+    const cands=[...G.active].map(k=>({k,pr:stockPrice(k,csz(k)),own:p.stocks[k]}))
+      .filter(c=>G.market[c.k]>0&&c.pr<=p.money).sort((a,b2)=>b2.own-a.own||a.pr-b2.pr);
+    for(const c of cands){if(!b)break;if(p.money>=c.pr&&G.market[c.k]>0){p.stocks[c.k]++;G.market[c.k]--;p.money-=c.pr;recordStockBought(c.k,1,c.pr);b--}}
+    drawTile(p);renderAll();
+    // Show turn summary for AI turn too — players need to see what AI bought
+    setTimeout(()=>{
+      G._pendingAdvance = advance;
+      showTurnSummary();
+    }, 400);
+  },500);
+}
+
+// ═══════════════ RENDER ═══════════════
+
+// Always returns the local human player regardless of turn order
+function localPlayer(){
+  if(G.isMP && MP.playerId){
+    return G.players.find(p=>p.id===MP.playerId) || G.players[0];
+  }
+  return G.players[0];
+}
+
+// Firebase converts arrays to objects with numeric keys {0:'a', 1:'b'}
+// This converts them back to proper arrays
+function fbArr(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  // Convert object with numeric keys back to array
+  return Object.keys(val).sort((a,b)=>parseInt(a)-parseInt(b)).map(k=>val[k]);
+}
+function fbObj(val, defaultVal) {
+  if (!val) return defaultVal || {};
+  return val;
+}
+function renderAll(){renderBoard();renderHand();renderLegendBar();renderFullLegend();renderMarket();renderScores();updBtns();updTurn();refreshExtras();}
+
+function renderBoard(){
+  const el=document.getElementById('board');el.innerHTML='';
+  for(const r of ROWS){
+    for(let c=1;c<=12;c++){
+      const tid=c+r,st=G.board[tid];
+      const d=document.createElement('div');d.className='tile';d.dataset.t=tid;
+      if(st&&st.placed){
+        d.classList.add('placed');
+        if(st.chain){
+          d.classList.add(CH[st.chain].cls);
+          if(st.hq){
+            d.classList.add('hq');
+            d.innerHTML=`<span class="hq-icon">${CH[st.chain].icon}</span><span class="tile-id">${tid}</span>`;
+          }else{d.innerHTML=`<span class="tile-id">${tid}</span>`}
+        }else{d.innerHTML=`<span class="tile-id">${tid}</span>`}
+      }else{
+        d.innerHTML=`<span class="tile-id">${tid}</span>`;
+        const h=localPlayer();
+        const handTiles=(h&&h.hand)?h.hand.filter(t=>!(G.board[t]&&G.board[t].placed)):[];
+        if(handTiles.includes(tid)){
+          d.classList.add('ih');
+          if(G.sel===tid)d.classList.add('sel-h','playable');
+          d.onclick=()=>selTile(tid);
+        } else if(G.sel===tid){ G.sel=null; }
+      }
+      el.appendChild(d);
+    }
+  }
+}
+function renderHand(){
+  const el=document.getElementById('hdsp');el.innerHTML='';
+  const h=localPlayer();
+  // Safety check: remove any tiles from hand that are already on the board
+  if(h && h.hand){
+    h.hand = h.hand.filter(tid => !(G.board[tid] && G.board[tid].placed));
+  }
+  for(let i=0;i<6;i++){
+    const d=document.createElement('div'),tid=h.hand[i];
+    if(!tid){d.className='ht em';d.textContent='·'}
+    else if(unplayable(tid)){d.className='ht up';d.textContent=tid}
+    else{d.className='ht'+(G.sel===tid?' sel':'');d.textContent=tid;d.onclick=()=>{if(!cur().isAI)selTile(tid)}}
+    el.appendChild(d);
+  }
+}
+function renderLegendBar(){
+  const el=document.getElementById('lb-chips');el.innerHTML='';
+  for(const k of CK){
+    const on=G.active.has(k);
+    const d=document.createElement('div');d.className='lb-chip';
+    d.style.background=on?CH[k].color+'33':'transparent';
+    d.innerHTML=`<span class="lb-icon" style="opacity:${on?1:.35}">${CH[k].icon}</span>${on?`<span class="lb-sz">${csz(k)}t</span>`:''}`;
+    el.appendChild(d);
+  }
+}
+function renderFullLegend(){
+  const el=document.getElementById('cleg-inner');el.innerHTML='';
+  for(const k of CK){
+    const on=G.active.has(k),sz=csz(k),pr=on?stockPrice(k,sz):0;
+    const d=document.createElement('div');d.className=`cc${on?' ac':''}`;
+    d.style.background=on?CH[k].color+'22':'transparent';
+    d.innerHTML=`<span class="cc-icon">${CH[k].icon}</span>
+      <div class="cc-info">
+        <span class="cc-name" style="color:${on?CH[k].color:' var(--bl)'}">${CH[k].name}</span>
+        <span class="cc-detail">${on?`${sz} tiles · $${pr}/share · ${TIERS[CH[k].tier]}`:`inactive · ${TIERS[CH[k].tier]} tier`}</span>
+      </div>`;
+    el.appendChild(d);
+  }
+}
+function renderMarket(){
+  const el=document.getElementById('sdsp');el.innerHTML='';
+  const p=localPlayer();
+  for(const k of CK){
+    const on=G.active.has(k),sz=csz(k),pr=on?stockPrice(k,sz):0;
+    const r=document.createElement('div');r.className='sr';r.style.borderLeftColor=CH[k].color;r.style.opacity=on?1:.5;
+    r.innerHTML=`<span style="font-size:16px">${CH[k].icon}</span>
+      <span class="sn">${CH[k].name}</span>
+      <span class="sc2">${on?sz+'t':'—'}</span>
+      <span class="sp">${on?'$'+pr:'—'}</span>
+      <span class="sc2" style="color:var(--goldl)">Own:${p.stocks[k]}</span>
+      <span class="sc2">Av:${G.market[k]}</span>`;
+    el.appendChild(r);
+  }
+}
+function renderScores(){
+  const el=document.getElementById('scdsp');el.innerHTML='';
+  const pub=G.vis==='public'||!G.isMP;
+  for(const p of G.players){
+    const r=document.createElement('div');r.className=`scr${p.id===cur().id?' cp2':''}`;
+    const pips=CK.map(k=>p.stocks[k]>0?`<span class="pip" style="background:${CH[k].color}" title="${CH[k].name}:${p.stocks[k]}"></span>`.repeat(Math.min(p.stocks[k],6)):'').join('');
+    r.innerHTML=`<div class="sca" style="background:${p.color};color:#fff">${p.name[0]}</div>
+      <div><div class="scn">${p.name}${p.isAI?' 🤖':''}</div><div class="scp">${pips}</div></div>
+      <div class="scm">${(pub||p.id===0)?'$'+p.money.toLocaleString():'???'}</div>`;
+    el.appendChild(r);
+  }
+}
+
+// ═══════════════ UI HELPERS ═══════════════
+function stab(t){
+  document.querySelectorAll('.pt').forEach(x=>x.classList.remove('a'));
+  document.querySelectorAll('.pc').forEach(x=>x.classList.remove('a'));
+  document.getElementById('tab-'+t).classList.add('a');
+  document.getElementById('panel-'+t).classList.add('a');
+  if(t==='prices')renderPriceRef();
+}
+function showScr(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
+function closeMo(id){document.getElementById(id).classList.remove('a')}
+function log2(m,t=''){
+  G.log.unshift({m,t});if(G.log.length>100)G.log.pop();
+  const el=document.getElementById('glog');
+  if(el)el.innerHTML=G.log.slice(0,40).map(e=>`<div class="le ${e.t}">${e.m}</div>`).join('');
+}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+function backSetup(){G={};clearSession();stopMusic();closeDrawer();showScr('sl')}
+
+// ═══════════════ DRAWER ═══════════════
+function toggleDrawer(){
+  const open=document.getElementById('side-drawer').classList.contains('open');
+  if(open)closeDrawer();else openDrawer();
+}
+function openDrawer(){
+  document.getElementById('side-drawer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('open');
+  document.getElementById('drawer-handle').classList.add('open');
+  renderDrawer();
+}
+function closeDrawer(){
+  document.getElementById('side-drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+  document.getElementById('drawer-handle').classList.remove('open');
+}
+function renderDrawer(){
+  if(!G.players)return;
+  const p=localPlayer();
+  document.getElementById('drawer-player-name').textContent=p.name.toUpperCase()+' · YOUR HOLDINGS';
+  document.getElementById('drawer-cash').textContent='$'+p.money.toLocaleString();
+
+  // Stock value estimate
+  let stockVal=0;
+  const el=document.getElementById('drawer-stocks');
+  el.innerHTML='';
+  for(const k of CK){
+    const qty=p.stocks[k];
+    const on=G.active.has(k);
+    const pr=on?stockPrice(k,csz(k)):0;
+    const val=qty*pr;
+    stockVal+=val;
+    const row=document.createElement('div');
+    row.className='drawer-stock-row';
+    row.style.borderLeftColor=CH[k].color;
+    row.style.opacity=qty>0?1:0.4;
+    row.innerHTML=`<span class="drawer-stock-icon">${CH[k].icon}</span>
+      <div class="drawer-stock-info">
+        <div class="drawer-stock-name">${CH[k].name}</div>
+        <div class="drawer-stock-detail">${on?'$'+pr+'/share · value $'+val.toLocaleString():'inactive'}</div>
+      </div>
+      <span class="drawer-stock-qty" style="color:${qty>0?CH[k].color:'var(--bl)'}">${qty}</span>`;
+    el.appendChild(row);
+  }
+  const net=p.money+stockVal;
+  document.getElementById('drawer-net').textContent='$'+net.toLocaleString();
+}
+
+// ═══════════════ PRICE REFERENCE ═══════════════
+function renderPriceRef(){
+  const el=document.getElementById('price-ref-content');
+  if(!el)return;
+
+  // Size brackets
+  const sizes=[
+    {label:'2',sz:2},{label:'3',sz:3},{label:'4',sz:4},{label:'5',sz:5},
+    {label:'6',sz:6},{label:'7-10',sz:8},{label:'11-20',sz:15},
+    {label:'21-30',sz:25},{label:'31-40',sz:35},{label:'41+',sz:41}
+  ];
+
+  let html='<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">';
+  html+='<table class="price-table"><thead><tr>';
+  html+='<th>Size</th>';
+  for(const k of CK){
+    html+=`<th class="chain-header" style="color:${CH[k].color}">${CH[k].icon}</th>`;
+  }
+  html+='</tr></thead><tbody>';
+
+  for(const{label,sz} of sizes){
+    // Check if any active chain is at this size bracket
+    const isCurrent=CK.some(k=>{
+      if(!G.active||!G.active.has(k))return false;
+      const s=csz(k);
+      if(label==='2')return s===2;
+      if(label==='3')return s===3;
+      if(label==='4')return s===4;
+      if(label==='5')return s===5;
+      if(label==='6')return s===6;
+      if(label==='7-10')return s>=7&&s<=10;
+      if(label==='11-20')return s>=11&&s<=20;
+      if(label==='21-30')return s>=21&&s<=30;
+      if(label==='31-40')return s>=31&&s<=40;
+      if(label==='41+')return s>=41;
+      return false;
+    });
+    html+=`<tr${isCurrent?' class="current-size"':''}>`;
+    html+=`<td class="size-col">${label}</td>`;
+    for(const k of CK){
+      const pr=stockPrice(k,sz);
+      const isActive=G.active&&G.active.has(k);
+      const chainSz=isActive?csz(k):0;
+      // Is this specific chain at this specific bracket?
+      const isThisChainHere=isActive&&(()=>{
+        const s=chainSz;
+        if(label==='2')return s===2;
+        if(label==='3')return s===3;
+        if(label==='4')return s===4;
+        if(label==='5')return s===5;
+        if(label==='6')return s===6;
+        if(label==='7-10')return s>=7&&s<=10;
+        if(label==='11-20')return s>=11&&s<=20;
+        if(label==='21-30')return s>=21&&s<=30;
+        if(label==='31-40')return s>=31&&s<=40;
+        if(label==='41+')return s>=41;
+        return false;
+      })();
+      const bg=isThisChainHere?CH[k].color+'88':'transparent';
+      const textColor=isThisChainHere?'#fff':(isActive?CH[k].color:undefined);
+      html+=`<td class="price-cell${isActive?' active-chain':''}" style="background:${bg};${textColor?'color:'+textColor:''}">$${pr}</td>`;
+    }
+    html+='</tr>';
+  }
+  html+='</tbody></table>';
+
+  // Bonus reference
+  html+='<div class="price-section-label">Stockholder Bonuses (Primary / Secondary / Tertiary)</div>';
+  html+='<table class="bonus-table"><thead><tr><th>Size</th>';
+  for(const k of CK) html+=`<th style="color:${CH[k].color}">${CH[k].icon}</th>`;
+  html+='</tr></thead><tbody>';
+
+  for(const{label,sz} of sizes){
+    html+=`<tr><td style="color:var(--bl);font-size:7px">${label}</td>`;
+    for(const k of CK){
+      const pr=stockPrice(k,sz);
+      const pri=pr*10,sec=pr*5,ter=Math.round(pr*3.5/100)*100;
+      html+=`<td style="font-size:7px;line-height:1.4">${pri/1000}k<br><span style="color:var(--bl)">${sec/1000}k/${ter/1000}k</span></td>`;
+    }
+    html+='</tr>';
+  }
+  html+='</tbody></table></div>';
+  el.innerHTML=html;
+}
+
+// Safe hooks - no recursion
+function refreshExtras(){
+  if(!G||!G.players)return;
+  try{
+    const drawer=document.getElementById('side-drawer');
+    if(drawer&&drawer.classList.contains('open'))renderDrawer();
+    const pp=document.getElementById('panel-prices');
+    if(pp&&pp.classList.contains('a'))renderPriceRef();
+  }catch(e){}
+}
+
+
+// ═══════════════════════════════════════════════════════
+// JAZZ MUSIC ENGINE — 1960s Hotel Lobby Ambient
+// ═══════════════════════════════════════════════════════
+let musicOn = false;
+let musicCtx = null;
+let musicGain = null;
+let musicScheduler = null;
+let musicNextTime = 0;
+let musicBeat = 0;
+
+const JAZZ_CHORDS = [
+  [349.23, 440.00, 523.25, 659.25],  // Fmaj7
+  [293.66, 349.23, 440.00, 523.25],  // Dm7
+  [196.00, 233.08, 293.66, 349.23],  // Gm7
+  [261.63, 329.63, 392.00, 466.16],  // C7
+  [220.00, 261.63, 329.63, 392.00],  // Am7
+  [233.08, 293.66, 349.23, 466.16],  // Bbmaj7
+];
+const CHORD_PROG = [0, 1, 2, 3, 0, 4, 2, 3];
+const TEMPO = 88;
+const BEAT = 60 / TEMPO;
+const BAR = BEAT * 4;
+
+function getMusicCtx() {
+  if (!musicCtx) {
+    musicCtx = new (window.AudioContext || window.webkitAudioContext)();
+    musicGain = musicCtx.createGain();
+    musicGain.gain.value = 0;
+    const comp = musicCtx.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.ratio.value = 3;
+    comp.attack.value = 0.05; comp.release.value = 0.3;
+    const delay = musicCtx.createDelay(0.4);
+    delay.delayTime.value = 0.07;
+    const dg = musicCtx.createGain(); dg.gain.value = 0.12;
+    musicGain.connect(delay); delay.connect(dg); dg.connect(delay);
+    musicGain.connect(comp); dg.connect(comp);
+    comp.connect(musicCtx.destination);
+  }
+  return musicCtx;
+}
+
+function pianoNote(freq, t0, dur, vel, ctx, dest) {
+  const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), env = ctx.createGain();
+  o1.type = 'triangle'; o1.frequency.value = freq;
+  o2.type = 'sine';     o2.frequency.value = freq * 2.002;
+  env.gain.setValueAtTime(0, t0);
+  env.gain.linearRampToValueAtTime(vel, t0 + 0.012);
+  env.gain.exponentialRampToValueAtTime(vel * 0.35, t0 + 0.09);
+  env.gain.exponentialRampToValueAtTime(vel * 0.15, t0 + dur * 0.5);
+  env.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o1.connect(env); o2.connect(env); env.connect(dest);
+  o1.start(t0); o2.start(t0); o1.stop(t0+dur+0.1); o2.stop(t0+dur+0.1);
+}
+
+function bassNote(freq, t0, dur, ctx, dest) {
+  const o = ctx.createOscillator(), env = ctx.createGain();
+  o.type = 'sine'; o.frequency.value = freq / 2;
+  env.gain.setValueAtTime(0, t0);
+  env.gain.linearRampToValueAtTime(0.16, t0 + 0.025);
+  env.gain.exponentialRampToValueAtTime(0.07, t0 + 0.35);
+  env.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(env); env.connect(dest);
+  o.start(t0); o.stop(t0+dur+0.1);
+}
+
+function brushSnare(t0, ctx, dest) {
+  const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.09), ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1) * Math.exp(-i/(ctx.sampleRate*0.022));
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  const f = ctx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=2800; f.Q.value=0.9;
+  const env = ctx.createGain(); env.gain.setValueAtTime(0.055, t0); env.gain.exponentialRampToValueAtTime(0.0001, t0+0.09);
+  src.connect(f); f.connect(env); env.connect(dest); src.start(t0);
+}
+
+function rideTick(t0, ctx, dest) {
+  const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.18), ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) {
+    const t = i / ctx.sampleRate;
+    d[i] = (Math.random()*2-1) * Math.exp(-t*10) * 0.4 + Math.sin(2*Math.PI*7200*t) * Math.exp(-t*14) * 0.25;
+  }
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  const f = ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=4800;
+  const env = ctx.createGain(); env.gain.setValueAtTime(0.038, t0); env.gain.exponentialRampToValueAtTime(0.0001, t0+0.16);
+  src.connect(f); f.connect(env); env.connect(dest); src.start(t0);
+}
+
+function scheduleBar(barIdx, t0) {
+  const ctx = getMusicCtx(), dest = musicGain;
+  const ci = CHORD_PROG[barIdx % CHORD_PROG.length];
+  const ch = JAZZ_CHORDS[ci];
+  const nci = CHORD_PROG[(barIdx+1) % CHORD_PROG.length];
+  const nch = JAZZ_CHORDS[nci];
+
+  // Bass: root on 1, fifth on 3
+  bassNote(ch[0], t0, BEAT*1.7, ctx, dest);
+  bassNote(ch[2], t0 + BAR*0.5, BEAT*1.7, ctx, dest);
+
+  // Comping — jazz rhythm on 2 and 4 with subdivisions
+  const compOffsets = [BEAT*0.95, BEAT*1.45, BEAT*1.95, BEAT*2.45, BEAT*2.95, BEAT*3.45];
+  for (const off of compOffsets) {
+    const jit = (Math.random()-0.5)*0.014;
+    const t = t0 + off + jit;
+    ch.forEach((freq, i) => {
+      const vel = (0.035 + Math.random()*0.025) * (i===0 ? 0.55 : 1);
+      pianoNote(freq, t + i*0.011, BEAT*0.65, vel, ctx, dest);
+    });
+  }
+
+  // Melody flourishes
+  if (Math.random() > 0.25) {
+    const mel = [ch[3]*2, ch[3]*2*1.125, nch[3]*2, ch[3]*2*1.25, ch[2]*2];
+    const numNotes = 2 + Math.floor(Math.random()*3);
+    const melOffsets = [0, BEAT*0.75, BEAT*1.5, BEAT*2.25, BEAT*3.0];
+    for (let n = 0; n < numNotes; n++) {
+      const freq = mel[Math.floor(Math.random()*mel.length)];
+      const tOff = melOffsets[n % melOffsets.length] + (Math.random()-0.5)*0.018;
+      pianoNote(freq, t0 + tOff, BEAT*0.55, 0.048+Math.random()*0.018, ctx, dest);
+    }
+  }
+
+  // Ride cymbal on every beat + upbeats
+  for (let b = 0; b < 4; b++) {
+    rideTick(t0 + b*BEAT, ctx, dest);
+    if (Math.random() > 0.4) rideTick(t0 + b*BEAT + BEAT*0.5, ctx, dest);
+  }
+
+  // Brush snare on 2 and 4
+  brushSnare(t0 + BEAT, ctx, dest);
+  brushSnare(t0 + BEAT*3, ctx, dest);
+  // Ghost snare occasionally
+  if (Math.random() > 0.6) brushSnare(t0 + BEAT*2.5, ctx, dest);
+}
+
+function scheduleLookahead() {
+  if (!musicOn || !musicCtx) return;
+  const now = musicCtx.currentTime;
+  while (musicNextTime < now + 0.5) {
+    scheduleBar(musicBeat, musicNextTime);
+    musicBeat++;
+    musicNextTime += BAR;
+  }
+}
+
+function startMusic() {
+  try {
+    const ctx = getMusicCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    musicNextTime = ctx.currentTime + 0.25;
+    musicBeat = 0;
+    musicGain.gain.cancelScheduledValues(ctx.currentTime);
+    musicGain.gain.setValueAtTime(0, ctx.currentTime);
+    musicGain.gain.linearRampToValueAtTime(0.65, ctx.currentTime + 2.5);
+    scheduleLookahead();
+    musicScheduler = setInterval(scheduleLookahead, 200);
+  } catch(e) { console.log('Music error:', e); }
+}
+
+function stopMusic(fadeDur) {
+  fadeDur = fadeDur || 1.5;
+  clearInterval(musicScheduler);
+  musicScheduler = null;
+  if (musicCtx && musicGain) {
+    const now = musicCtx.currentTime;
+    musicGain.gain.cancelScheduledValues(now);
+    musicGain.gain.setValueAtTime(musicGain.gain.value, now);
+    musicGain.gain.linearRampToValueAtTime(0, now + fadeDur);
+  }
+}
+
+function toggleMusic() {
+  musicOn = !musicOn;
+  document.getElementById('music-toggle').textContent = musicOn ? '🎵' : '🔕';
+  if (musicOn) startMusic();
+  else stopMusic(1.0);
+}
+
+
+// Stop music on game end
+const _showEndOrig = showEnd;
+function showEnd(){
+  stopMusic(2.5);
+  _showEndOrig();
+}
+
+// ═══════════════════════════════════════════════════════
+// TURN SUMMARY SYSTEM
+// ═══════════════════════════════════════════════════════
+let turnSummary = {};
+
+function startTurnSummary(playerName) {
+  turnSummary = { player: playerName, tile: null, action: null, stocks: [], chain: null };
+}
+
+function recordTilePlaced(tid, actionType, chainName) {
+  turnSummary.tile = tid;
+  turnSummary.action = actionType;
+  turnSummary.chain = chainName;
+}
+
+function recordStockBought(chainKey, qty, price) {
+  if (qty > 0) turnSummary.stocks.push({ chain: chainKey, qty, price });
+}
+
+function showTurnSummary() {
+  const p = turnSummary;
+  const el = document.getElementById('mts-body');
+  const playerEl = document.getElementById('mts-player');
+
+  playerEl.textContent = p.player + "'s Turn";
+
+  let html = '';
+
+  // Tile placed
+  if (p.tile) {
+    html += `<div style="margin-bottom:10px;padding:8px;background:rgba(62,32,8,0.08);border-radius:3px;border-left:3px solid var(--bd)">`;
+    html += `<div style="font-family:'Special Elite',cursive;font-size:9px;letter-spacing:2px;color:var(--bl);text-transform:uppercase;margin-bottom:3px">Tile Placed</div>`;
+    html += `<div style="font-size:15px;font-weight:bold">${p.tile}</div>`;
+    if (p.action && p.chain) {
+      const actionLabels = {
+        'found': `🏨 Founded <strong>${p.chain}</strong>`,
+        'grow':  `📈 Grew <strong>${p.chain}</strong>`,
+        'merge': `💥 Triggered merger — <strong>${p.chain}</strong> survives`,
+        'ind':   'Added an independent tile'
+      };
+      html += `<div style="font-size:12px;margin-top:3px">${actionLabels[p.action] || p.action}</div>`;
+    }
+    html += '</div>';
+  }
+
+  // Stocks bought
+  html += `<div style="margin-bottom:8px;padding:8px;background:rgba(62,32,8,0.08);border-radius:3px;border-left:3px solid var(--gold)">`;
+  html += `<div style="font-family:'Special Elite',cursive;font-size:9px;letter-spacing:2px;color:var(--bl);text-transform:uppercase;margin-bottom:5px">Stocks Purchased</div>`;
+  if (p.stocks.length === 0) {
+    html += `<div style="font-size:12px;color:var(--bl);font-style:italic">No stocks purchased this turn</div>`;
+  } else {
+    let total = 0;
+    for (const s of p.stocks) {
+      const cost = s.qty * s.price;
+      total += cost;
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(62,32,8,0.1)">`;
+      html += `<span style="font-size:16px">${CH[s.chain].icon}</span>`;
+      html += `<div style="flex:1"><div style="font-family:'Special Elite',cursive;font-size:10px;text-transform:uppercase">${CH[s.chain].name}</div>`;
+      html += `<div style="font-size:10px;color:var(--bl)">${s.qty} share${s.qty>1?'s':''} @ $${s.price} each</div></div>`;
+      html += `<div style="font-family:'Playfair Display',serif;font-weight:700;color:var(--bd)">$${cost.toLocaleString()}</div>`;
+      html += '</div>';
+    }
+    html += `<div style="text-align:right;font-family:'Playfair Display',serif;font-weight:700;font-size:13px;color:var(--bd);margin-top:5px">Total: $${total.toLocaleString()}</div>`;
+  }
+  html += '</div>';
+
+  // Reminder
+  html += `<div style="font-family:'Special Elite',cursive;font-size:9px;color:var(--bl);text-align:center;letter-spacing:1px;font-style:italic">Note what you've seen. Once you close this, it's gone. Check the Log tab to review turn history.</div>`;
+
+  el.innerHTML = html;
+  // Update button text based on context
+  const btn = document.getElementById('mts-dismiss-btn');
+  if (btn) {
+    if (G._pendingAdvance) {
+      btn.textContent = "Got it — end my turn";
+    } else {
+      // Check if it will be my turn next
+      const nextIdx = (G.ci + 1) % G.players.length; // approximate
+      btn.textContent = "Got it";
+    }
+  }
+  document.getElementById('mts').classList.add('a');
+}
+
+function dismissTurnSummary() {
+  closeMo('mts');
+  if (G._pendingAdvance) {
+    // I am the active player — advance the game
+    const fn = G._pendingAdvance;
+    G._pendingAdvance = null;
+    fn();
+  }
+  // Other players: just close — Firebase handles their turn activation
+}
+// ═══════════════════════════════════════════════════════
+// RULEBOOK
+// ═══════════════════════════════════════════════════════
+function openRulebook() {
+  const el = document.getElementById('rulebook-content');
+  el.innerHTML = buildRulebook();
+  document.getElementById('mrb').classList.add('a');
+}
+
+function rbSection(title) {
+  return `<div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--bd);margin:16px 0 6px;padding-bottom:4px;border-bottom:2px solid var(--gold)">${title}</div>`;
+}
+function rbP(text) {
+  return `<p style="margin-bottom:8px">${text}</p>`;
+}
+function rbChain(k) {
+  return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;margin:3px 0;border-radius:3px;border-left:4px solid ${CH[k].color};background:rgba(62,32,8,0.06)">
+    <span style="font-size:16px">${CH[k].icon}</span>
+    <div><div style="font-family:'Special Elite',cursive;font-size:10px;text-transform:uppercase">${CH[k].name}</div>
+    <div style="font-size:9px;color:var(--bl)">${['Low','Mid','High'][CH[k].tier]} tier — starts at $${[200,300,400][CH[k].tier]}/share</div></div></div>`;
+}
+
+function buildRulebook() {
+  let r = '';
+
+  r += rbSection('🎯 Objective');
+  r += rbP('Become the wealthiest player by founding, growing, and merging hotel chains. The player with the most money at the end of the game wins.');
+
+  r += rbSection('🏨 The Seven Chains');
+  r += '<div style="margin-bottom:10px">';
+  for (const k of CK) r += rbChain(k);
+  r += '</div>';
+  r += rbP('Chains are grouped into three price tiers. Higher-tier chains are worth more per share at every size. <strong>Kanab Towers</strong> and <strong>Moab Luxor</strong> are low tier (start at $200). <strong>Silicon Slopes Festival</strong>, <strong>Layton Worldwide</strong>, and <strong>American Saint George</strong> are mid tier (start at $300). <strong>Imperial Park City</strong> and <strong>Salt Lake Continental</strong> are high tier (start at $400).');
+
+  r += rbSection('⚙️ Setup');
+  r += rbP('Each player starts with <strong>$6,000</strong>: four $1,000 bills, three $500s, five $100s. Each player draws <strong>6 building tiles</strong> and keeps them secret (or public — set at game start). The player whose starting tile is closest to 1A goes first.');
+
+  r += rbSection('🔄 On Your Turn — 3 Actions');
+  r += rbP('<strong>1. Place a Building Tile.</strong> Choose one tile from your hand and place it on the matching board space. Four things can happen:');
+  r += rbP('&nbsp;&nbsp;• <strong>Independent:</strong> No adjacent tiles. Tile sits alone.');
+  r += rbP('&nbsp;&nbsp;• <strong>Found a Chain:</strong> Your tile connects to unaffiliated tiles. Choose a chain from the available headquarters and place it. You receive <strong>one free Founder\'s Bonus stock</strong>.');
+  r += rbP('&nbsp;&nbsp;• <strong>Grow a Chain:</strong> Your tile is adjacent to an existing chain. That chain gains one tile and increases in value.');
+  r += rbP('&nbsp;&nbsp;• <strong>Merger:</strong> Your tile connects two or more chains. See Merger rules below.');
+  r += rbP('<strong>2. Buy Up to 3 Stocks.</strong> After placing your tile, you may buy up to 3 stock cards total in any active chains. You may split across multiple chains. Stock price depends on chain tier + current chain size — check the Prices tab.');
+  r += rbP('<strong>3. Draw a Replacement Tile.</strong> Draw one tile to return your hand to 6. Discard any tiles that would merge two safe chains (11+ tiles each) and draw replacements.');
+
+  r += rbSection('💥 Mergers');
+  r += rbP('When your tile connects two or more chains, a merger occurs. The <strong>larger chain survives</strong>. If chains are tied in size, the player who placed the tile chooses the survivor.');
+  r += rbP('<strong>Step 1 — Pay Stockholder Bonuses</strong> for the acquired (smaller) chain based on its size at time of merger. See bonus table in the Prices tab.');
+  r += rbP('<strong>Step 2 — Stock Disposal.</strong> Starting with the player who caused the merger, each player with stock in the acquired chain must choose for each share: <strong>Keep</strong> (hope the chain re-forms later — worth $0 if it never does), <strong>Sell</strong> (bank pays current price), or <strong>Trade</strong> (2 acquired shares → 1 surviving chain share).');
+  r += rbP('<strong>Safe chains (11+ tiles) cannot be acquired.</strong> A tile that would merge two safe chains is unplayable.');
+
+  r += rbSection('💰 Stockholder Bonuses');
+  r += rbP('Bonuses are paid to the top stockholders when a chain is acquired (merger) or at game end.');
+  r += rbP('<strong>Classic Mode:</strong> Primary (most shares) and Secondary (second-most) bonuses are paid.');
+  r += rbP('<strong>Tycoon Mode:</strong> Primary, Secondary, and Tertiary (third-most) bonuses are paid.');
+  r += rbP('<strong>Ties:</strong> Tied players split the combined bonus, rounded up to the nearest $100. The next position\'s bonus then goes to whoever holds that rank.');
+  r += rbP('<strong>Single stockholder:</strong> Classic — receives both Primary + Secondary. Tycoon — receives Primary + Tertiary.');
+
+  r += rbSection('🏁 Ending the Game');
+  r += rbP('A player <em>may</em> (but is not required to) announce the game is over on their turn when either:');
+  r += rbP('&nbsp;&nbsp;• Any active chain has <strong>41 or more tiles</strong>, OR');
+  r += rbP('&nbsp;&nbsp;• <strong>All active chains are safe</strong> (11+ tiles each).');
+  r += rbP('After the announcement, that player finishes their turn normally. Then all chains pay out final stockholder bonuses, all stocks are sold at current prices, and the player with the most total cash wins.');
+
+  r += rbSection('🤖 2-Player Rules');
+  r += rbP('Use Classic Mode. During mergers, the <strong>Stock Market</strong> acts as a third stockholder. Draw a tile to determine how many shares it holds (e.g., tile 9F = 9 shares). Any bonuses the Stock Market would receive stay in the bank. Return the tile and reshuffle. At game end, the Stock Market competes for bonuses in all active chains.');
+
+  r += rbSection('💡 Strategy Tips');
+  r += rbP('• <strong>Diversify.</strong> Receiving bonuses across multiple chains is the fastest path to winning.');
+  r += rbP('• <strong>Watch the small chains.</strong> A chain with 3–5 tiles getting absorbed can yield a huge bonus if you hold the primary position.');
+  r += rbP('• <strong>Trade, don\'t just sell.</strong> Trading 2-for-1 into the surviving chain during a merger often yields more long-term value than selling.');
+  r += rbP('• <strong>Corner control.</strong> Chains near the edges of the board are harder to grow and merge — less valuable in the late game.');
+  r += rbP('• <strong>Founding a re-formed chain</strong> that other players held onto benefits them more than you — unless no one held.');
+
+  return r;
+}
+
+// ═══════════════════════════════════════════════════════
+// FIREBASE MULTIPLAYER ENGINE
+// ═══════════════════════════════════════════════════════
+// Firebase config — Stonefire Aquire project
+const FB_CONFIG = {
+  apiKey: "AIzaSyAtV-Vv9PnyXE6qxRWQcMZi0PgAlaInAC8",
+  authDomain: "stonefire-aquire.firebaseapp.com",
+  databaseURL: "https://stonefire-aquire-default-rtdb.firebaseio.com",
+  projectId: "stonefire-aquire",
+  storageBucket: "stonefire-aquire.firebasestorage.app",
+  messagingSenderId: "547221276500",
+  appId: "1:547221276500:web:74cd11fb45273fa035eac1"
+};
+
+let fbApp = null, fbDb = null;
+let MP = { roomCode: null, playerId: null, isHost: false, gameType: 'live', listener: null };
+const PLAYER_COLORS = ['#c9a227','#6a8fd8','#e87070','#70c870','#d4a0d4','#f0c060'];
+
+function initFirebase() {
+  if (fbDb) return; // Already initialized
+  try {
+    // Check if already initialized (prevents duplicate app error)
+    try { fbApp = firebase.app(); } catch(e) { fbApp = firebase.initializeApp(FB_CONFIG); }
+    fbDb = firebase.database();
+  } catch(e) {
+    console.log('Firebase init error:', e.message);
+    toast('Firebase connection error: ' + e.message);
+  }
+}
+
+function dbRef(path) { return fbDb.ref(path); }
+
+// ── LOBBY NAVIGATION ──
+function showModeSelect() {
+  document.getElementById('lobby-mode-select').style.display = 'block';
+  document.getElementById('lobby-create').style.display = 'none';
+  document.getElementById('lobby-join').style.display = 'none';
+  document.getElementById('lobby-waiting').style.display = 'none';
+  document.getElementById('lobby-joined').style.display = 'none';
+}
+function showCreateRoom() {
+  document.getElementById('lobby-mode-select').style.display = 'none';
+  document.getElementById('lobby-create').style.display = 'block';
+}
+function showJoinRoom() {
+  document.getElementById('lobby-mode-select').style.display = 'none';
+  document.getElementById('lobby-join').style.display = 'block';
+}
+function showSoloSetup() {
+  showScr('ss');
+}
+
+// Option groups in lobby
+['mp-mode','mp-type','mp-timer','mp-music'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('click', e => {
+    const b = e.target.closest('.lopt'); if (!b) return;
+    el.querySelectorAll('.lopt').forEach(x => x.classList.remove('sel'));
+    b.classList.add('sel');
+    // Toggle timer group visibility based on live/async
+    if (id === 'mp-type') {
+      const tg = document.getElementById('timer-group-mp');
+      if (tg) tg.style.display = b.dataset.v === 'live' ? 'block' : 'none';
+    }
+  });
+});
+
+function getLopt(id) {
+  const s = document.querySelector(`#${id} .lopt.sel`);
+  return s ? s.dataset.v : null;
+}
+
+// ── ROOM CODE GENERATION ──
+function genRoomCode() {
+  const utah = ['MOAB','UTAH','ZION','ARCH','MESA','SALT','PARK','BRYCE','CEDAR','PROVO'];
+  const base = utah[Math.floor(Math.random() * utah.length)];
+  const num = Math.floor(Math.random() * 90) + 10;
+  return base.slice(0, 4) + num;
+}
+
+// ── CREATE ROOM ──
+function createRoom() {
+  initFirebase();
+  const name = document.getElementById('create-name').value.trim();
+  if (!name) { alert('Enter your name first'); return; }
+
+  const code = genRoomCode();
+  const mode = getLopt('mp-mode') || 'tycoon';
+  const gameType = getLopt('mp-type') || 'live';
+  const timer = parseInt(getLopt('mp-timer')) || 0;
+  const music = getLopt('mp-music') || 'yes';
+  const playerId = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+
+  MP.roomCode = code;
+  MP.playerId = playerId;
+  MP.isHost = true;
+  MP.gameType = gameType;
+
+  const roomData = {
+    code,
+    status: 'waiting',
+    settings: { mode, gameType, timer, music },
+    host: playerId,
+    createdAt: Date.now(),
+    players: {}
+  };
+  roomData.players[playerId] = { name, id: playerId, order: 0, ready: true, joinedAt: Date.now() };
+
+  dbRef('games/' + code).set(roomData).then(function() {
+    saveSession();
+    document.getElementById('display-room-code').textContent = code;
+    document.getElementById('lobby-create').style.display = 'none';
+    document.getElementById('lobby-waiting').style.display = 'block';
+    document.getElementById('lobby-rejoin').style.display = 'none';
+    listenWaitingRoom(code);
+  }).catch(function(e) { alert('Could not create room. Check connection.'); console.log(e); });
+}
+
+function joinRoom() {
+  initFirebase();
+  const name = document.getElementById('join-name').value.trim();
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  const errEl = document.getElementById('join-error');
+  errEl.textContent = '';
+
+  if (!name) { errEl.textContent = 'Enter your name'; return; }
+  if (!code || code.length < 4) { errEl.textContent = 'Enter a valid room code'; return; }
+
+  dbRef('games/' + code).once('value').then(function(snap) {
+    if (!snap.exists()) { errEl.textContent = 'Room not found. Check the code.'; return; }
+    var room = snap.val();
+    if (room.status === 'ended') { errEl.textContent = 'This game has ended.'; return; }
+
+    // Allow rejoining an in-progress game by matching player name
+    if (room.status === 'playing') {
+      var players = room.players || {};
+      var match = Object.values(players).find(function(p){ return p.name.toLowerCase() === name.toLowerCase(); });
+      if (!match) { errEl.textContent = 'Game in progress. No player named "'+name+'" found to rejoin.'; return; }
+      MP.roomCode = code;
+      MP.playerId = match.id;
+      MP.isHost = (room.host === match.id);
+      MP.gameType = (room.settings && room.settings.gameType) || 'live';
+      saveSession();
+      loadAndStartMPGame(room);
+      return;
+    }
+
+    var players = room.players || {};
+    var count = Object.keys(players).length;
+    if (count >= 6) { errEl.textContent = 'Room is full (6 players max).'; return; }
+
+    var playerId = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+    MP.roomCode = code;
+    MP.playerId = playerId;
+    MP.isHost = false;
+    MP.gameType = (room.settings && room.settings.gameType) || 'live';
+
+    var playerData = { name: name, id: playerId, order: count, ready: true, joinedAt: Date.now() };
+    dbRef('games/' + code + '/players/' + playerId).set(playerData).then(function() {
+      saveSession();
+      document.getElementById('joined-room-title').textContent = 'ROOM ' + code;
+      document.getElementById('lobby-join').style.display = 'none';
+      document.getElementById('lobby-joined').style.display = 'block';
+      document.getElementById('lobby-rejoin').style.display = 'none';
+      listenJoinedRoom(code);
+      if (room.settings && room.settings.music === 'yes') {
+        musicOn = true;
+        document.getElementById('music-toggle').textContent = '🎵';
+        startMusic();
+      }
+    });
+  }).catch(function(e) { errEl.textContent = 'Connection error. Try again.'; console.log(e); });
+}
+
+function hostStartGame() {
+  if (!MP.isHost) return;
+  var code = MP.roomCode;
+  dbRef('games/' + code).once('value').then(function(snap) {
+    var room = snap.val();
+    var players = Object.values(room.players).sort(function(a,b){return a.order-b.order;});
+    var settings = room.settings;
+    var rows = ['A','B','C','D','E','F','G','H','I'];
+    var allTiles = [];
+    for (var c = 1; c <= 12; c++) for (var ri = 0; ri < rows.length; ri++) allTiles.push(c+rows[ri]);
+    shuffle(allTiles);
+    var hands = {}, startTiles = {};
+    for (var i = 0; i < players.length; i++) {
+      hands[players[i].id] = [];
+      for (var j = 0; j < 6; j++) hands[players[i].id].push(allTiles.pop());
+    }
+    for (var i = 0; i < players.length; i++) startTiles[players[i].id] = allTiles.pop();
+    players.sort(function(a,b) {
+      var ta=startTiles[a.id],tb=startTiles[b.id];
+      var ca=parseInt(ta),cb=parseInt(tb);
+      var ra=ta.slice(String(ca).length),rb=tb.slice(String(cb).length);
+      return ca!==cb?ca-cb:ra.localeCompare(rb);
+    });
+    var board = {};
+    for (var i = 0; i < players.length; i++) board[startTiles[players[i].id]]={placed:true,chain:null,hq:false};
+    var chains={}, market={};
+    CK.forEach(function(k){chains[k]=[];market[k]=25;});
+    var gameState = {
+      board:board, chains:chains, active:[], market:market, tileBag:allTiles,
+      currentPlayerIdx:0, playerOrder:players.map(function(p){return p.id;}),
+      phase:'place', mode:settings.mode, timer:settings.timer,
+      gameType:settings.gameType, turnNumber:1, lastUpdate:Date.now()
+    };
+    var playerStates = {};
+    var stockBase={};CK.forEach(function(k){stockBase[k]=0;});
+    players.forEach(function(p,i) {
+      playerStates[p.id]={name:p.name,money:6000,stocks:Object.assign({},stockBase),order:i,color:PLAYER_COLORS[i]};
+    });
+    var updates = {};
+    updates['games/'+code+'/state'] = gameState;
+    updates['games/'+code+'/playerStates'] = playerStates;
+    updates['games/'+code+'/hands'] = hands;
+    updates['games/'+code+'/status'] = 'playing';
+    return fbDb.ref().update(updates);
+  }).catch(function(e){console.log('hostStartGame error:',e);});
+}
+
+function loadAndStartMPGame(room) {
+  var code = MP.roomCode;
+  dbRef('games/'+code+'/hands/'+MP.playerId).once('value').then(function(handSnap) {
+    var myHand = fbArr(handSnap.val());
+    return dbRef('games/'+code+'/playerStates').once('value').then(function(psSnap) {
+      var playerStates = psSnap.val() || {};
+      var state = room.state;
+      var playerOrder = state.playerOrder || [];
+      var players = playerOrder.map(function(pid) {
+        var ps = playerStates[pid] || {};
+        var stockBase={};CK.forEach(function(k){stockBase[k]=0;});
+        return {
+          id:pid, name:ps.name||pid, isAI:false, isMe:pid===MP.playerId,
+          color:ps.color||'#c9a227', money:ps.money||6000,
+          hand:pid===MP.playerId?myHand:[],
+          stocks:ps.stocks||Object.assign({},stockBase)
+        };
+      });
+      var chains={};
+      CK.forEach(function(k){chains[k]=state.chains?fbArr(state.chains[k]):[];});
+      var market={};CK.forEach(function(k){market[k]=25;});
+      var toBuy={};CK.forEach(function(k){toBuy[k]=0;});
+      G = {
+        players:players, bag:fbArr(state.tileBag), board:state.board||{},
+        chains:chains, active:new Set(fbArr(state.active)),
+        market:state.market||market,
+        ci:state.currentPlayerIdx||0, phase:state.phase||'place',
+        sel:null, mode:state.mode||'tycoon', timer:state.timer||0,
+        timerLeft:state.timer||0, timerInt:null, vis:'private',
+        log:[], pendMerger:null, dispQ:[], toBuy:toBuy,
+        legendOpen:false, isMP:true, roomCode:code, myPlayerId:MP.playerId
+      };
+      return dbRef('games/'+code+'/settings').once('value');
+    }).then(function(settingsSnap) {
+      var roomSettings = settingsSnap.val() || {};
+      if (roomSettings.music === 'yes') {
+        musicOn = true;
+        document.getElementById('music-toggle').textContent = '🎵';
+        startMusic();
+      }
+      showScr('sg');
+      renderAll();
+      log2('Multiplayer game started! Room: '+code, 'imp');
+      listenGameState(code);
+    });
+  }).catch(function(e){console.log('loadAndStartMPGame error:',e);});
+}
+
+
+// ── WAITING ROOM LISTENERS ──
+function listenWaitingRoom(code) {
+  dbRef('games/' + code + '/players').on('value', function(snap) {
+    var players = snap.val() || {};
+    renderLobbyPlayers(players, 'lobby-players-list', true);
+    var count = Object.keys(players).length;
+    var noteEl = document.getElementById('lobby-waiting-note');
+    var startBtn = document.getElementById('btn-start-game');
+    if (count >= 2) {
+      noteEl.textContent = count + ' players ready';
+      if (startBtn) startBtn.style.display = 'flex';
+    } else {
+      noteEl.textContent = 'Waiting for players to join… (need at least 2)';
+      if (startBtn) startBtn.style.display = 'none';
+    }
+  });
+  // Also listen for status change to 'playing'
+  dbRef('games/' + code + '/status').on('value', function(snap) {
+    if (snap.val() === 'playing') {
+      dbRef('games/' + code + '/status').off();
+      dbRef('games/' + code + '/players').off();
+      dbRef('games/' + code).once('value').then(function(roomSnap) {
+        loadAndStartMPGame(roomSnap.val());
+      });
+    }
+  });
+}
+
+function listenJoinedRoom(code) {
+  dbRef('games/' + code).on('value', function(snap) {
+    var room = snap.val();
+    if (!room) return;
+    var players = room.players || {};
+    renderLobbyPlayers(players, 'lobby-joined-players', false);
+    if (room.status === 'playing') {
+      dbRef('games/' + code).off();
+      loadAndStartMPGame(room);
+    }
+  });
+}
+
+function renderLobbyPlayers(players, containerId, showTag) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  var sorted = Object.values(players).sort(function(a,b){return a.order-b.order;});
+  sorted.forEach(function(p, i) {
+    var row = document.createElement('div');
+    row.className = 'lobby-player-row';
+    var tag = p.id === MP.playerId ? 'YOU' : (MP.isHost && p.id === MP.playerId ? 'HOST' : 'GUEST');
+    row.innerHTML = '<div class="lobby-player-avatar" style="background:' + (PLAYER_COLORS[i]||'#c9a227') + ';color:#fff">' + p.name[0].toUpperCase() + '</div>' +
+      '<div class="lobby-player-name">' + p.name + '</div>' +
+      '<div class="lobby-player-tag">' + tag + '</div>';
+    el.appendChild(row);
+  });
+}
+
+function copyRoomCode() {
+  var code = MP.roomCode;
+  if (!code) return;
+  var msg = 'Join my Utah Acquire game! Room code: ' + code + '\nOpen: https://utah-acquire.netlify.app';
+  if (navigator.share) {
+    navigator.share({ title: 'Utah Acquire', text: msg });
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(msg).then(function(){ toast('Room code copied!'); });
+  } else {
+    toast('Room code: ' + code);
+  }
+}
+
+// Re-fetch and apply full MP state (used after merger modal dismiss, rejoin, etc.)
+function refreshMPState(){
+  if(!G.isMP||!G.roomCode)return;
+  var code=G.roomCode;
+  dbRef('games/'+code+'/state').once('value',function(snap){
+    var state=snap.val();
+    if(!state)return;
+    applyMPState(state,code);
+  });
+}
+
+function applyMPState(state,code){
+  // If the active player is mid-turn (buy phase, merger, etc.), don't let
+  // an echo of our own Firebase write overwrite local state.
+  var isMyTurn = G.players[state.currentPlayerIdx||0] &&
+                 G.players[state.currentPlayerIdx||0].id === MP.playerId;
+  var localPhaseAhead = isMyTurn && G.phase === 'buy' && state.phase === 'place';
+
+  // Always update board, chains, market, bag from Firebase
+  G.board = state.board || G.board;
+  if (state.chains) {
+    G.chains = {};
+    for (var k of CK) G.chains[k] = fbArr(state.chains[k]);
+  }
+  G.active = new Set(fbArr(state.active));
+  G.market = state.market || G.market;
+  G.bag = fbArr(state.tileBag) || G.bag;
+  G.ci = state.currentPlayerIdx || 0;
+  // Don't regress phase if we've already advanced locally (merger → buy race)
+  if (!localPhaseAhead) {
+    G.phase = state.phase || 'place';
+  }
+
+  dbRef('games/'+code+'/playerStates').once('value').then(function(psSnap) {
+    var ps = psSnap.val() || {};
+    for (var i = 0; i < G.players.length; i++) {
+      var p = G.players[i];
+      if (ps[p.id]) { p.money = ps[p.id].money; p.stocks = ps[p.id].stocks; }
+    }
+    return dbRef('games/'+code+'/hands/'+MP.playerId).once('value');
+  }).then(function(handSnap) {
+    var myIdx = G.players.findIndex(function(p){return p.id===MP.playerId;});
+    if (myIdx >= 0 && handSnap.val()) G.players[myIdx].hand = fbArr(handSnap.val());
+
+    renderAll();
+    updTurn();
+
+    // Don't start a turn if a merger modal is showing or disposal is in progress.
+    var mergerModalOpen = document.getElementById('modal-merger-announce').classList.contains('a');
+    var disposalOpen = document.getElementById('msd').classList.contains('a');
+    var mergerInProgress = !!G.pendMerger;
+
+    if (mergerModalOpen || disposalOpen || mergerInProgress) {
+      return;
+    }
+    // Don't stomp on the active player's buy phase
+    if (localPhaseAhead) return;
+
+    if (cur().id === MP.playerId) {
+      G.sel = null;
+      toast('Your turn!');
+      startTurn();
+    } else {
+      updBtns();
+      document.getElementById('tlbl').textContent = 'WAITING';
+      document.getElementById('tname').textContent = cur().name + "'s turn\u2026";
+    }
+  });
+}
+
+function listenGameState(code) {
+  dbRef(`games/${code}/state`).on('value', function(snap) {
+    var state = snap.val();
+    if (!state || !G.isMP) return;
+    applyMPState(state,code);
+  });
+
+
+  // Show turn summary to all players when active player pushes it
+  let shownSummaryTs = 0;
+  dbRef(`games/${code}/lastTurnSummary`).on('value', snap => {
+    const summary = snap.val();
+    if (!summary || !summary.timestamp) return;
+    if (summary.timestamp <= shownSummaryTs) return; // already showed this one
+    if (summary.playerId === MP.playerId) return; // active player shows it locally, not via Firebase
+    shownSummaryTs = summary.timestamp;
+    // Show other player's turn summary — informational only
+    turnSummary = summary.data || {};
+    G._pendingAdvance = null; // not our advance to trigger
+    showTurnSummary();
+  });
+
+  // Show merger announcement on remote phones when mergemaker pushes it
+  var shownMergerTs = 0;
+  dbRef('games/'+code+'/lastMerger').on('value', function(snap) {
+    var data = snap.val();
+    if (!data || !data.timestamp) return;
+    if (data.timestamp <= shownMergerTs) return; // already showed this one
+    // Only show on phones that DIDN'T run the merger (mergemaker saw it locally)
+    if (cur().id === MP.playerId) return;
+    shownMergerTs = data.timestamp;
+    // Reconstruct and show the gold announcement modal (read-only, no disposal)
+    var sv = data.sv;
+    var acq = data.acq || [];
+    var bonusData = data.bonusData || [];
+    if (sv == null || !acq.length) return;
+    showMergerModal(sv, acq, bonusData, function(){ /* no-op — disposal ran on mergemaker's phone */ });
+  });
+}
+
+// ── WRITE MOVE TO FIREBASE ──
+function writeMoveToFirebase(updatedG) {
+  if (!G.isMP) return Promise.resolve();
+  const code = G.roomCode;
+  const myIdx = G.players.findIndex(p => p.id === MP.playerId);
+  const me = G.players[myIdx];
+  const updates = {};
+  updates[`games/${code}/state/board`] = updatedG.board;
+  updates[`games/${code}/state/chains`] = updatedG.chains;
+  updates[`games/${code}/state/active`] = [...updatedG.active];
+  updates[`games/${code}/state/market`] = updatedG.market;
+  updates[`games/${code}/state/tileBag`] = updatedG.bag;
+  updates[`games/${code}/state/currentPlayerIdx`] = updatedG.ci;
+  updates[`games/${code}/state/phase`] = updatedG.phase;
+  updates[`games/${code}/state/lastUpdate`] = Date.now();
+  updates[`games/${code}/playerStates/${MP.playerId}/money`] = me.money;
+  updates[`games/${code}/playerStates/${MP.playerId}/stocks`] = me.stocks;
+  updates[`games/${code}/hands/${MP.playerId}`] = me.hand;
+  return fbDb.ref().update(updates);
+}
+
+// ── PUSH TURN SUMMARY TO FIREBASE ──
+function pushTurnSummaryToFirebase() {
+  if (!G.isMP) return;
+  const code = G.roomCode;
+  return dbRef(`games/${code}/lastTurnSummary`).set({
+    playerId: MP.playerId,
+    playerName: (G.players.find(p=>p.id===MP.playerId)||{}).name || 'Player',
+    data: turnSummary,
+    timestamp: Date.now()
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// REJOIN FLOW — Persist session, detect existing game, reconnect
+// ═══════════════════════════════════════════════════════
+
+function saveSession(){
+  try{
+    localStorage.setItem('utahAcquireSession',JSON.stringify({
+      roomCode:MP.roomCode, playerId:MP.playerId, isHost:MP.isHost,
+      gameType:MP.gameType, savedAt:Date.now()
+    }));
+  }catch(e){}
+}
+function clearSession(){
+  try{localStorage.removeItem('utahAcquireSession');}catch(e){}
+}
+function getSavedSession(){
+  try{
+    var raw=localStorage.getItem('utahAcquireSession');
+    if(!raw)return null;
+    var s=JSON.parse(raw);
+    // Expire after 24 hours
+    if(Date.now()-s.savedAt>24*60*60*1000){clearSession();return null;}
+    return s;
+  }catch(e){return null;}
+}
+
+function attemptRejoin(){
+  var sess=getSavedSession();
+  if(!sess||!sess.roomCode||!sess.playerId)return;
+  initFirebase();
+  var rejoinEl=document.getElementById('lobby-rejoin');
+  if(rejoinEl)rejoinEl.style.display='block';
+
+  dbRef('games/'+sess.roomCode).once('value').then(function(snap){
+    if(!snap.exists()){clearSession();if(rejoinEl)rejoinEl.style.display='none';return;}
+    var room=snap.val();
+    if(room.status==='ended'){clearSession();if(rejoinEl)rejoinEl.style.display='none';return;}
+    var players=room.players||{};
+    if(!players[sess.playerId]){clearSession();if(rejoinEl)rejoinEl.style.display='none';return;}
+    // Valid session found — show rejoin button with room info
+    var name=players[sess.playerId].name||'Player';
+    var pCount=Object.keys(players).length;
+    var rejoinInfo=document.getElementById('rejoin-info');
+    if(rejoinInfo)rejoinInfo.textContent='Room '+sess.roomCode+' · '+pCount+' players · '+name;
+    if(rejoinEl)rejoinEl.style.display='block';
+  }).catch(function(){if(rejoinEl)rejoinEl.style.display='none';});
+}
+
+function doRejoin(){
+  var sess=getSavedSession();
+  if(!sess)return;
+  initFirebase();
+  MP.roomCode=sess.roomCode;
+  MP.playerId=sess.playerId;
+  MP.isHost=sess.isHost;
+  MP.gameType=sess.gameType;
+
+  dbRef('games/'+sess.roomCode).once('value').then(function(snap){
+    if(!snap.exists()){toast('Game no longer exists');clearSession();return;}
+    var room=snap.val();
+    if(room.status==='ended'){toast('Game has ended');clearSession();return;}
+    if(!room.players||!room.players[sess.playerId]){toast('Player not found in room');clearSession();return;}
+    if(room.status==='playing'){
+      // Game in progress — jump straight in
+      loadAndStartMPGame(room);
+      saveSession(); // refresh timestamp
+    }else if(room.status==='waiting'){
+      // Still in lobby — show waiting/joined screen
+      if(sess.isHost){
+        document.getElementById('display-room-code').textContent=sess.roomCode;
+        document.getElementById('lobby-mode-select').style.display='none';
+        document.getElementById('lobby-rejoin').style.display='none';
+        document.getElementById('lobby-waiting').style.display='block';
+        listenWaitingRoom(sess.roomCode);
+      }else{
+        document.getElementById('joined-room-title').textContent='ROOM '+sess.roomCode;
+        document.getElementById('lobby-mode-select').style.display='none';
+        document.getElementById('lobby-rejoin').style.display='none';
+        document.getElementById('lobby-joined').style.display='block';
+        listenJoinedRoom(sess.roomCode);
+      }
+    }
+  }).catch(function(e){toast('Connection error');console.log('Rejoin error:',e);});
+}
+
+// On page load, check for saved session
+(function(){
+  // Small delay to let DOM settle
+  setTimeout(attemptRejoin,300);
+})();
+</script>
+
+
+<!-- TURN SUMMARY MODAL -->
+<div class="mo" id="mts"><div class="md" style="max-width:400px">
+  <div class="mt" id="mts-player">Turn Summary</div>
+  <div class="ms">What just happened</div>
+  <div id="mts-body" style="font-family:'Libre Baskerville',serif;font-size:13px;color:var(--bd);line-height:1.7;margin-bottom:16px"></div>
+  <button class="bp" style="font-size:13px;padding:10px" id="mts-dismiss-btn" onclick="dismissTurnSummary()">Got it</button>
+</div></div>
+
+<!-- RULEBOOK MODAL -->
+<div class="mo" id="mrb" style="padding:8px;align-items:flex-start;overflow-y:auto"><div class="md" style="max-width:480px;margin:auto">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+    <div class="mt" style="font-size:22px">📖 Utah Acquire</div>
+    <button onclick="closeMo('mrb')" style="background:var(--bd);border:1px solid var(--bm);color:var(--cream);padding:4px 10px;border-radius:3px;font-family:'Special Elite',cursive;cursor:pointer;font-size:11px">CLOSE</button>
+  </div>
+  <div class="ms" style="margin-bottom:12px">Official Rulebook</div>
+  <div id="rulebook-content" style="font-family:'Libre Baskerville',serif;font-size:12px;color:var(--bd);line-height:1.7"></div>
+</div></div>
+
+<!-- SIDE DRAWER -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer-handle" id="drawer-handle" onclick="toggleDrawer()">MY PORTFOLIO</div>
+<div class="side-drawer" id="side-drawer">
+  <div class="drawer-title">💼 My Portfolio</div>
+  <div class="drawer-name" id="drawer-player-name">Gary</div>
+  <div class="drawer-money">
+    <span class="drawer-money-label">Cash on Hand</span>
+    <span id="drawer-cash">$6,000</span>
+  </div>
+  <div class="drawer-section-title">Stock Holdings</div>
+  <div id="drawer-stocks"></div>
+  <div class="drawer-net-worth">
+    <span class="drawer-net-label">Estimated Net Worth</span>
+    <span class="drawer-net-value" id="drawer-net">$6,000</span>
+  </div>
+</div>
+
+</body>
+</html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
